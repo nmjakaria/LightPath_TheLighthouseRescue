@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 10 — Game rules, five levels, progression — PARTIAL (2026-11-17). Implementation, full gate, solution replay 5/5 and coverage all pass; real-browser mouse/keyboard/visual checks remain unverified. Waiting for "next" before STEP 11.
+STEP 11 — Visual polish — PARTIAL (2026-11-17). Implementation and full gate pass (270 tests); real-browser visual, FPS and CPU-throttle checks remain unverified. Waiting for "next" before STEP 12.
 
 ## Step log (date · step · status · commit)
 
@@ -18,7 +18,7 @@ STEP 10 — Game rules, five levels, progression — PARTIAL (2026-11-17). Imple
 | 2026-11-17 | 8 — Level 1 playable | PARTIAL | e519bd4 (feature) |
 | 2026-11-17 | 9 — Remaining mechanics | PARTIAL | 9e70f23 (feature) |
 | 2026-11-17 | 10 — Game rules, five levels, progression | PARTIAL | 7dec7aa (feature) |
-| — | 11 — Visual polish | NOT STARTED | — |
+| 2026-11-17 | 11 — Visual polish | PARTIAL | 8f07acf (feature) |
 | — | 12 — Audio | NOT STARTED | — |
 | — | 13 — Optics Inspector | NOT STARTED | — |
 | — | 14 — Accessibility, performance, hardening | NOT STARTED | — |
@@ -87,6 +87,14 @@ STEP 10 — Game rules, five levels, progression — PARTIAL (2026-11-17). Imple
 - Validation errors block level loading and render `LevelError`; spacing overlaps remain warnings because PRD A-10 permits playtest nudges. `levelValidator.ts` was split into `validationTypes.ts`, `levelValidatorFields.ts` and `levelValidatorSpacing.ts` to meet the 250-line budget.
 - HUD derivation moved to `engine/core/hud.ts` and solver-scene assembly to `game/opticsScene.ts` so `GameState.ts` stays at exactly 250 lines; `GameCanvas.tsx` contains two small components (each under 120 lines), not one oversized one.
 - Real-browser HUD readability, pause/result focus behaviour, tutorial toasts, level unlock after completion and celebration timing were not verified without browser automation. Unit tests cover score records, unlock derivation, timer/pause, hint tiers, validation and all five solution replays.
+- Step 11 keeps every atmosphere/particle number in `src/config/visualConfig.ts`; quality caps continue to come from `gameConfig.quality`, so adding a preset does not require editing a renderer.
+- `Pool<T>` uses preallocated numeric handles and a LIFO free list; `ParticlePool` drops ambient motes before effect particles when a cap is hit, and all emitters scan with indices so steady frames allocate nothing.
+- Emitters receive the resolved `palette` and a `colorFor` callback (`beamColor`) instead of hex literals; no renderer or emitter duplicates a CSS token value.
+- Quality and reduced-motion changes apply live through one mutable `VisualSettings` object shared by reference with the layers plus `setSettings()`, so changing a setting never rebuilds layers or remounts the canvas.
+- The Level 4 darkness mask uses a pre-rendered radial sprite with `destination-out` holes at ≤120 sampled beam points (PRD §12.7), rather than creating a gradient per sample per frame.
+- `BeamLayer` now honours `quality.glowPasses` by drawing the brightest N passes and adds the PRD §12.5 moving dash highlight; the highlight is disabled under reduced motion.
+- Drag intent/types moved to `src/engine/core/drag.ts` so `useGameRuntime.ts` stays at 241 lines after wiring quality and particles.
+- Real-browser visual checks for TC-G10 (CPU-throttled motion speed), FR-058/063 (twinkle/sweep/mist/reduced motion), FR-059/060 (glow and additive overlap) and the darkness atmosphere were not performed; pure-function time-equivalence and cap tests cover the logic only.
 
 ## PRD deviations (with justification)
 
@@ -163,6 +171,14 @@ STEP 10 — Game rules, five levels, progression — PARTIAL (2026-11-17). Imple
 - 2026-11-17: largest source file is `GameState.ts` at exactly 250 lines (budget 250), then `useGameRuntime.ts` 246, `tracer.ts` 243, `GameInteraction.ts` 232, `levelValidatorFields.ts` 230; largest React shell is `GameCanvas.tsx` at 133 lines containing two components of ~40 and ~82 lines (budget 120 per component).
 - 2026-11-17: TC-F08–F13, TC-F15/F16 and TC-E08 are covered by `rules.test.ts`, `scoring.test.ts`, `hints.test.ts`, `levelValidator.test.ts` and `solutions.test.ts`. No browser interaction, FPS, frame-time or bundle-size figures were measured in this step.
 
+## Step 11 measurements
+
+- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 270 tests in 47 files ✔ (21 new), `next build` ✔ (7 static routes plus `/play/[levelId]` partial prerender).
+- 2026-11-17, new unit tests: `Pool<T>` free-list reuse and defensive handles (4), particle caps/TC-G11 with a 200-frame simulated scene (5), time-based animation/TC-G10 equivalence at 30 vs 144 FPS (4), glow-sprite cache keying/eviction (4), darkness sample cap/buffer safety (4).
+- 2026-11-17, 500 four-mirror solves in the passing gate run (no coverage instrumentation): average 0.1503 ms, p95 0.2195 ms, max 5.2574 ms.
+- 2026-11-17: largest Step 11 source file is `ParticlePool.ts` at 249 lines (budget 250), then `useGameRuntime.ts` 241, `GameCanvas.tsx` 136, `emitters.ts` 161, `EnvironmentLayer.ts` 110, `BeamLayer.ts` 92; all React components remain under the 120-line budget. No hardcoded hex colours in the new renderer/particle files.
+- No FPS, frame-time, bundle-size or CPU-throttle figures were measured in this step; no browser automation was available.
+
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
 | ID | Status | ID | Status |
@@ -190,6 +206,6 @@ AC-15 / AC-21: focus ring is defined globally (`:focus-visible` cyan outline) an
 AC-02: Step 5 adds all menu routes, Back buttons, schema-driven settings, lock-toast redirects and error boundaries; SSR markup tests and production HTTP 200 checks pass, but live mouse/keyboard navigation, reload persistence and confirmation-dialog interaction remain not verified in a browser.
 FR-001–010: implemented across Step 5 screens and gating; real-browser acceptance is still pending, so the step status is PARTIAL rather than PASS.
 FR-061 / TC-G12: responsive 16:9 view transform, DPR cap and pointer inversion implemented and unit-tested in Step 6; zoom/letterbox rendering and idle 60 FPS still need a real browser.
-FR-062 / FR-063: quality and reduced-motion values are threaded into the canvas hook, but live switching and visible motion reduction are Steps 11–12 work; the STEP 6 preview only pauses its pulse clock when reduced motion is active.
+FR-062 / FR-063: quality and reduced-motion now apply live in Step 11 through a shared mutable `VisualSettings` object (particle caps, glow passes, water layers, sweep/particle damping); unit tests cover the caps and time-equivalence, but visible live switching needs a real browser (unverified). FR-058–061: pooled particles, cached glow sprites, additive beam overlap, stars/water/mist/sweep and the Level 4 darkness mask are implemented; TC-G10/G11 logic is unit-tested, visual and CPU-throttle demos remain unverified.
 TC-F03 / AC-06: 20 reflection pairs pass the independent 2θ−φ oracle in Step 7; the 4-bounce chain coordinates assertion is a test-scene check, not a Level 2 reference (levels arrive in STEP 10).
 AC-14: TC-X01–X08 now all pass (X05/X06 were added in Step 9). AC-22 still has ≥90% optics coverage after prism/gate additions; scoring and validator statement coverage were measured in STEP 10, with branch coverage still to be raised in STEP 14.
