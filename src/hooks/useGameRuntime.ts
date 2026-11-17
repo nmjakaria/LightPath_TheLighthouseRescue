@@ -3,15 +3,7 @@
 /* React owns the canvas element and its listeners; the engine owns state, input queue, loop and
  * layers. Only a low-rate HUD snapshot crosses back into React, so pointer moves never re-render.
  * All listeners, observers and frames are released on unmount for Strict Mode safety. */
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useSyncExternalStore,
-  type PointerEvent,
-  type RefObject,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type PointerEvent, type RefObject } from "react";
 import { inspectorConfig } from "@/config/inspectorConfig";
 import { uiConfig } from "@/config/uiConfig";
 import type { QualityPresetValues } from "@/config/gameConfig";
@@ -42,6 +34,8 @@ export interface GameRuntime {
   onPointerUp(event: PointerEvent<HTMLCanvasElement>): void;
   onPointerLeave(): void;
   getStats(): { fps: number; frameMs: number };
+  getSelectableIds(): readonly string[];
+  getSelectedId(): string | null;
 }
 
 export function useGameRuntime(
@@ -162,12 +156,8 @@ export function useGameRuntime(
 
   const pointerWorld = useCallback((event: PointerEvent<HTMLCanvasElement>): Vec2 => {
     const rect = event.currentTarget.getBoundingClientRect();
-    return (
-      viewRef.current?.toWorld({ x: event.clientX - rect.left, y: event.clientY - rect.top }) ?? {
-        x: 0,
-        y: 0,
-      }
-    );
+    const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    return viewRef.current?.toWorld(point) ?? { x: 0, y: 0 };
   }, []);
 
   const dispatch = useCallback((command: InputCommand): void => inputRef.current?.enqueue(command), []);
@@ -180,7 +170,10 @@ export function useGameRuntime(
       const point = pointerWorld(event);
       const picked = pickComponent(point, state.mirrors, state.sources, state.movableObstacles);
       input.enqueue({ type: "hover", id: picked?.id ?? null });
-      input.enqueue({ type: "select", id: picked && picked.kind !== "obstacle" ? picked.id : null });
+      input.enqueue({
+        type: "select",
+        id: picked && picked.kind !== "obstacle" ? picked.id : null,
+      });
       if (picked) {
         const mode: DragMode = picked.kind === "obstacle" ? "obstacle" : "rotate";
         dragRef.current = { id: picked.id, mode };
@@ -210,7 +203,8 @@ export function useGameRuntime(
         return;
       }
       const center = state.componentCenter(drag.id);
-      if (center) input.enqueue({ type: "rotateTo", id: drag.id, angleDeg: pointerAngle(point, center) });
+      if (center)
+        input.enqueue({ type: "rotateTo", id: drag.id, angleDeg: pointerAngle(point, center) });
     },
     [pointerWorld],
   );
@@ -241,8 +235,12 @@ export function useGameRuntime(
     return { fps: stats?.fps ?? 0, frameMs: stats?.frameMs ?? 0 };
   }, []);
 
+  const getSelectableIds = useCallback((): readonly string[] => stateRef.current?.interaction.selectableIds ?? [], []);
+  const getSelectedId = useCallback((): string | null => stateRef.current?.selectedId ?? null, []);
+
   return useMemo(() => ({
     containerRef, canvasRef, snapshot, dispatch, pointerWorld,
-    onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats,
-  }), [snapshot, dispatch, pointerWorld, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats]);
+    onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats, getSelectableIds, getSelectedId,
+  }), [snapshot, dispatch, pointerWorld, onPointerDown, onPointerMove, onPointerUp, onPointerLeave,
+    getStats, getSelectableIds, getSelectedId]);
 }

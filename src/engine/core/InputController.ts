@@ -29,6 +29,10 @@ export function commandForKey(key: string, shiftKey: boolean): InputCommand | nu
     case "q":
     case "Q":
       return { type: "rotateStep", direction: -1, fine: shiftKey };
+    case "ArrowUp":
+      return { type: "nudgeObstacle", axis: "y", direction: -1 };
+    case "ArrowDown":
+      return { type: "nudgeObstacle", axis: "y", direction: 1 };
     case "z":
     case "Z":
       return { type: "undo" };

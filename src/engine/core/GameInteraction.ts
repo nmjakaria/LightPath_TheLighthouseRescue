@@ -8,6 +8,7 @@ import { axisCoordinate, constrainedPosition } from "@/game/movableObstacles";
 import { restoreGeometry, snapshotGeometry, type GeometrySnapshot } from "@/game/geometry";
 import { snapAngle } from "@/lib/math/angles";
 import { FULL_TURN_DEG, MIRROR_PERIOD_DEG } from "@/lib/math/constants";
+import { keyboardNudgePosition, nextSelectableId, selectableComponentIds } from "./keyboardActions";
 import { UndoStack } from "./UndoStack";
 import type { InputCommand, InteractionFeedback } from "@/types/input";
 import type { LevelMirrorConfig, MovableObstacleRuntime, SourceRuntime } from "@/types/level";
@@ -49,6 +50,7 @@ export class GameInteraction {
 
   get dragId(): string | null { return this.rotateDrag?.id ?? null; }
   get obstacleDragId(): string | null { return this.obstacleDrag?.id ?? null; }
+  get selectableIds(): string[] { return selectableComponentIds(this.components); }
 
   kindOf(id: string | null): "mirror" | "source" | "obstacle" | null {
     if (!id) return null;
@@ -70,13 +72,13 @@ export class GameInteraction {
   apply(command: InputCommand): void {
     switch (command.type) {
       case "hover": this.hoveredId = command.id; return;
-      case "select":
-        this.selectedId = command.id && this.kindOf(command.id) !== "obstacle" ? command.id : null;
-        return;
+      case "select": this.selectedId = command.id && this.kindOf(command.id) ? command.id : null; return;
       case "beginRotate": this.beginRotate(command.id); return;
       case "rotateTo": this.rotateTo(command.id, command.angleDeg); return;
       case "endRotate": this.commitDrag(command.id); return;
       case "rotateStep": this.rotateStep(command.direction, command.fine); return;
+      case "cycleSelection": this.cycleSelection(command.direction); return;
+      case "nudgeObstacle": this.nudgeObstacle(command.axis, command.direction); return;
       case "beginDragObstacle": this.beginDragObstacle(command.id); return;
       case "dragObstacleTo": this.dragObstacleTo(command.id, command.point); return;
       case "endDragObstacle": this.endDragObstacle(command.id); return;
@@ -107,9 +109,7 @@ export class GameInteraction {
     return null;
   }
 
-  private angleOf(ref: RotatableRef): number {
-    return ref.kind === "mirror" ? ref.item.angleDeg : ref.item.headingDeg;
-  }
+  private angleOf(ref: RotatableRef): number { return ref.kind === "mirror" ? ref.item.angleDeg : ref.item.headingDeg; }
 
   private writeAngle(ref: RotatableRef, angleDeg: number): void {
     if (ref.kind === "mirror") ref.item.angleDeg = angleDeg;
@@ -160,10 +160,7 @@ export class GameInteraction {
     this.rotateDrag = null;
   }
 
-  private angleOfSafe(id: string): number | null {
-    const ref = this.findRotatable(id);
-    return ref ? this.angleOf(ref) : null;
-  }
+  private angleOfSafe(id: string): number | null { const ref = this.findRotatable(id); return ref ? this.angleOf(ref) : null; }
 
   private rotateStep(direction: -1 | 1, fine: boolean): void {
     const ref = this.findRotatable(this.selectedId);
@@ -174,6 +171,26 @@ export class GameInteraction {
       this.undo.push(before);
       this.moves += 1;
     }
+  }
+
+  private cycleSelection(direction: -1 | 1): void {
+    const id = nextSelectableId(this.selectableIds, this.selectedId, direction);
+    if (id) this.selectedId = this.hoveredId = id;
+  }
+
+  private nudgeObstacle(axis: "x" | "y", direction: -1 | 1): void {
+    const obstacle = this.components.movableObstacles.find((item) => item.id === this.selectedId);
+    if (!obstacle) return;
+    const before = this.currentGeometry();
+    const next = constrainedPosition(obstacle, keyboardNudgePosition(obstacle, axis, direction));
+    if (next.x === obstacle.position.x && next.y === obstacle.position.y) {
+      this.feedback = "outsideRange";
+      return;
+    }
+    obstacle.position = next;
+    this.options.onGeometryChange();
+    this.undo.push(before);
+    this.moves += 1;
   }
 
   private beginDragObstacle(id: string): void {
@@ -208,13 +225,11 @@ export class GameInteraction {
   }
 
   private currentGeometry(): GeometrySnapshot {
-    const { mirrors, sources, movableObstacles } = this.components;
-    return snapshotGeometry(mirrors, sources, movableObstacles);
+    return snapshotGeometry(this.components.mirrors, this.components.sources, this.components.movableObstacles);
   }
 
   private restore(snapshot: GeometrySnapshot): void {
-    const { mirrors, sources, movableObstacles } = this.components;
-    restoreGeometry(snapshot, mirrors, sources, movableObstacles);
+    restoreGeometry(snapshot, this.components.mirrors, this.components.sources, this.components.movableObstacles);
     this.options.onGeometryChange();
   }
 

@@ -16,6 +16,7 @@ import {
   drawSource,
   drawSwitch,
 } from "../componentShapes";
+import { drawTargetShape } from "../targetShapes";
 import type { Layer } from "../Layer";
 import type { Palette } from "../palette";
 
@@ -104,12 +105,7 @@ export class ComponentsLayer implements Layer {
   private drawBoundary(ctx: CanvasRenderingContext2D): void {
     ctx.strokeStyle = this.palette.navyLine;
     ctx.lineWidth = gameConfig.render.lineWidth.boundary;
-    ctx.strokeRect(
-      BOUNDARY.x0,
-      BOUNDARY.y0,
-      BOUNDARY.x1 - BOUNDARY.x0,
-      BOUNDARY.y1 - BOUNDARY.y0,
-    );
+    ctx.strokeRect(BOUNDARY.x0, BOUNDARY.y0, BOUNDARY.x1 - BOUNDARY.x0, BOUNDARY.y1 - BOUNDARY.y0);
   }
 
   private drawObstacles(ctx: CanvasRenderingContext2D): void {
@@ -134,13 +130,18 @@ export class ComponentsLayer implements Layer {
     ctx.beginPath();
     ctx.arc(0, 0, target.radius * targetCoreFraction, 0, Math.PI * 2);
     ctx.fill();
+    drawTargetShape(ctx, target.requires, target.radius * targetCoreFraction, this.palette);
     if (target.chargeSec > 0 && !target.active) this.drawChargeArc(ctx, target, chargeArcOffsetPx);
     ctx.fillStyle = this.palette.mist;
     ctx.fillText(target.id, target.radius + labelOffsetPx, -target.radius);
     ctx.restore();
   }
 
-  private drawChargeArc(ctx: CanvasRenderingContext2D, target: TargetRuntime, offset: number): void {
+  private drawChargeArc(
+    ctx: CanvasRenderingContext2D,
+    target: TargetRuntime,
+    offset: number,
+  ): void {
     const fraction = Math.min(1, target.chargeSec / gameConfig.targets.activationSec);
     ctx.strokeStyle = this.palette.starGold;
     ctx.lineWidth = gameConfig.render.lineWidth.target;
@@ -162,7 +163,8 @@ export class ComponentsLayer implements Layer {
     ctx.stroke();
     ctx.fillStyle = this.palette.mist;
     ctx.fillText(mirror.id, mirror.center.x + labelOffsetPx, mirror.center.y - labelOffsetPx);
-    if (!mirror.rotatable) drawLockBadge(ctx, mirror.center.x + labelOffsetPx, mirror.center.y, this.palette);
+    if (!mirror.rotatable)
+      drawLockBadge(ctx, mirror.center.x + labelOffsetPx, mirror.center.y, this.palette);
   }
 
   private drawHighlight(ctx: CanvasRenderingContext2D, a: Vec2, b: Vec2): void {

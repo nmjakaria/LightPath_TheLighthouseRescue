@@ -10,6 +10,8 @@ export type InputCommand =
   | { type: "rotateTo"; id: string; angleDeg: number }
   | { type: "endRotate"; id: string }
   | { type: "rotateStep"; direction: -1 | 1; fine: boolean }
+  | { type: "cycleSelection"; direction: -1 | 1 }
+  | { type: "nudgeObstacle"; axis: "x" | "y"; direction: -1 | 1 }
   | { type: "beginDragObstacle"; id: string }
   | { type: "dragObstacleTo"; id: string; point: Vec2 }
   | { type: "endDragObstacle"; id: string }

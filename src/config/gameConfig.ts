@@ -62,6 +62,8 @@ export interface GameConfig {
     targetRadius: number;
     switchRadius: number;
     lampHandleRadius: number;
+    keyboardNudgeWU: number;
+    fineNudgeWU: number;
   };
   targets: {
     activationSec: number;
@@ -112,6 +114,8 @@ export interface GameConfig {
     labelFontSizePx: number;
     labelOffsetPx: number;
     targetCoreFraction: number;
+    targetShapeFraction: number;
+    targetShapeLineWidth: number;
     chargeArcOffsetPx: number;
     lockBadgeRadius: number;
     handleRadius: number;
@@ -148,6 +152,8 @@ export const gameConfig: GameConfig = {
     targetRadius: TARGET_RADIUS,
     switchRadius: SWITCH_RADIUS,
     lampHandleRadius: 22,
+    keyboardNudgeWU: 20,
+    fineNudgeWU: 5,
   },
   targets: {
     activationSec: TARGET_ACTIVATION_SEC,
@@ -206,6 +212,8 @@ export const gameConfig: GameConfig = {
     labelFontSizePx: 12,
     labelOffsetPx: 8,
     targetCoreFraction: 1 / 3,
+    targetShapeFraction: 0.5,
+    targetShapeLineWidth: 2,
     chargeArcOffsetPx: 6,
     lockBadgeRadius: 5,
     handleRadius: 5,

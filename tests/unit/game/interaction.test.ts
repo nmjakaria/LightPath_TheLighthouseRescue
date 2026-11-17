@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { GameState } from "@/engine/core/GameState";
-import {
-  constrainedPosition,
-  movableObstacleAt,
-  worldVertices,
-} from "@/game/movableObstacles";
+import { constrainedPosition, movableObstacleAt, worldVertices } from "@/game/movableObstacles";
 import { pickComponent, pickSource } from "@/game/picking";
-import { lamp, targetAt, testLevel, WHITE } from "./fixtures";
+import { lamp, mirrorAt, targetAt, testLevel, WHITE } from "./fixtures";
 import type { MovableObstacleRuntime } from "@/types/level";
 
 const FRAME = 1 / 60;
@@ -104,5 +100,57 @@ describe("lamp rotation and locked feedback (FR-023)", () => {
     expect(
       pickComponent({ x: 120, y: 500 }, state.mirrors, state.sources, state.movableObstacles),
     ).toEqual({ id: "S2", kind: "source" });
+  });
+});
+
+describe("keyboard-only play (NFR-015, TC-F02)", () => {
+  function scene(): GameState {
+    return new GameState(
+      testLevel({
+        sources: [lamp("S1", 120, 300, 0, WHITE, true)],
+        mirrors: [mirrorAt("M1", 500, 300, 0)],
+        movableObstacles: [SLIDE],
+      }),
+    );
+  }
+
+  it("cycles mirrors, rotatable lamps and rocks with Tab, including wrap-around", () => {
+    const state = scene();
+    expect(state.interaction.selectableIds).toEqual(["M1", "S1", "W1"]);
+    for (const expected of ["M1", "S1", "W1", "M1"]) {
+      state.apply({ type: "cycleSelection", direction: 1 });
+      expect(state.selectedId).toBe(expected);
+    }
+    state.apply({ type: "cycleSelection", direction: -1 });
+    expect(state.selectedId).toBe("W1");
+    expect(state.moves).toBe(0);
+  });
+
+  it("nudges a selected rock one snap step, respects its rail and undoes exactly", () => {
+    const state = scene();
+    state.apply({ type: "select", id: "W1" });
+    expect(state.selectedId).toBe("W1");
+
+    state.apply({ type: "nudgeObstacle", axis: "x", direction: 1 });
+    expect(state.movableObstacles[0].position).toEqual({ x: 420, y: 300 });
+    expect(state.moves).toBe(1);
+    expect(state.dirty).toBe(true);
+
+    state.apply({ type: "nudgeObstacle", axis: "y", direction: -1 });
+    expect(state.feedback).toBe("outsideRange");
+    expect(state.moves).toBe(1);
+
+    state.apply({ type: "undo" });
+    expect(state.movableObstacles[0].position).toEqual({ x: 400, y: 300 });
+    expect(state.moves).toBe(1);
+  });
+
+  it("stays inside the authored range when nudging repeatedly", () => {
+    const state = scene();
+    state.apply({ type: "select", id: "W1" });
+    for (let index = 0; index < 10; index += 1) {
+      state.apply({ type: "nudgeObstacle", axis: "x", direction: -1 });
+    }
+    expect(state.movableObstacles[0].position).toEqual({ x: 300, y: 300 });
   });
 });

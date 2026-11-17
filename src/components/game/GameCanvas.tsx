@@ -2,7 +2,14 @@
 
 /* React shell around the game runtime. The canvas stays purely visual; HUD, pause and result are
  * DOM components composed from UI primitives, and all engine access goes through the runtime hook. */
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { features } from "@/config/features";
 import { uiConfig } from "@/config/uiConfig";
 import type { QualityPresetValues } from "@/config/gameConfig";
@@ -18,6 +25,7 @@ import { CompletionDialog } from "./CompletionDialog";
 import { GameHud } from "./GameHud";
 import { InspectorPanel, recordFrame } from "./InspectorPanel";
 import { LevelError } from "./LevelError";
+import { OrientationNotice } from "./OrientationNotice";
 import { PresentationControls } from "./PresentationControls";
 import { PauseMenu } from "./PauseMenu";
 import { TutorialToasts } from "./TutorialToasts";
@@ -26,13 +34,14 @@ export function GameCanvas({ levelId = "level-01" }: { levelId?: string }) {
   const { effective } = useSettings();
   const level = getLevelById(levelId);
   const validation = useMemo(
-    () => level
-      ? validateLevel(level)
-      : {
-          valid: false,
-          errors: [{ path: "levelId", message: `unknown level "${levelId}"` }],
-          warnings: [],
-        },
+    () =>
+      level
+        ? validateLevel(level)
+        : {
+            valid: false,
+            errors: [{ path: "levelId", message: `unknown level "${levelId}"` }],
+            warnings: [],
+          },
     [level, levelId],
   );
 
@@ -56,13 +65,34 @@ interface PlayableGameProps {
   showFps: boolean;
 }
 
-function PlayableGame({ level, reducedMotion, rotationStepDeg, qualityPreset, showFps }: PlayableGameProps) {
+function PlayableGame({
+  level,
+  reducedMotion,
+  rotationStepDeg,
+  qualityPreset,
+  showFps,
+}: PlayableGameProps) {
   const audio = useAudio();
   const runtime = useGameRuntime(level, reducedMotion, rotationStepDeg, qualityPreset, audio);
   const { progress, recordCompletion, recordAttempt, markTutorialSeen } = useProgress();
-  const { containerRef, canvasRef, snapshot, dispatch, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats } = runtime;
+  const { containerRef, canvasRef, snapshot, dispatch, getStats, getSelectableIds, getSelectedId } = runtime;
+  const { onPointerDown, onPointerMove, onPointerUp, onPointerLeave } = runtime;
   const [stats, setStats] = useState({ fps: 0, frameMs: 0 });
   const saved = useRef(false);
+
+  const onCanvasKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLCanvasElement>) => {
+      if (event.key !== "Tab") return;
+      const ids = getSelectableIds();
+      if (ids.length === 0) return;
+      const index = ids.indexOf(getSelectedId() ?? "");
+      const direction = event.shiftKey ? -1 : 1;
+      if (direction === 1 && index === ids.length - 1) return;
+      event.preventDefault();
+      dispatch({ type: "cycleSelection", direction });
+    },
+    [dispatch, getSelectableIds, getSelectedId],
+  );
 
   useEffect(() => {
     if (!showFps) return;
@@ -92,8 +122,11 @@ function PlayableGame({ level, reducedMotion, rotationStepDeg, qualityPreset, sh
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label={`${level.name} optical puzzle. Drag a mirror or lamp to rotate it; drag a rock along its rail.`}
+        tabIndex={0}
+        aria-label={`${level.name} optical puzzle. Drag or use arrow keys to rotate; drag a rock along its rail.`}
+        aria-describedby="play-controls-help"
         className="block h-full w-full touch-none"
+        onKeyDown={onCanvasKeyDown}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -102,6 +135,11 @@ function PlayableGame({ level, reducedMotion, rotationStepDeg, qualityPreset, sh
       >
         Your browser does not support Canvas 2D.
       </canvas>
+      <p id="play-controls-help" className="sr-only">
+        Press Tab to cycle components, left and right arrows to rotate, up and down arrows to slide
+        a selected rock, Z to undo, R to reset and Escape to pause.
+      </p>
+      <OrientationNotice />
       <GameHud
         level={level}
         snapshot={snapshot}
@@ -133,12 +171,17 @@ function PlayableGame({ level, reducedMotion, rotationStepDeg, qualityPreset, sh
         dispatch={dispatch}
         onPause={() => dispatch({ type: "pauseToggle" })}
       />
-      {showFps && !snapshot.inspector.inspector && (
-        <p className="pointer-events-none absolute right-3 top-3 rounded-button border border-navy-line bg-midnight/80 px-2 py-1 font-mono text-xs text-mist">
-          {stats.fps} FPS · {stats.frameMs} ms
-        </p>
-      )}
+      <FpsBadge visible={showFps && !snapshot.inspector.inspector} stats={stats} />
     </div>
+  );
+}
+
+function FpsBadge({ visible, stats }: { visible: boolean; stats: { fps: number; frameMs: number } }) {
+  if (!visible) return null;
+  return (
+    <p className="pointer-events-none absolute right-3 top-3 rounded-button border border-navy-line bg-midnight/80 px-2 py-1 font-mono text-xs text-mist">
+      {stats.fps} FPS · {stats.frameMs} ms
+    </p>
   );
 }
 
