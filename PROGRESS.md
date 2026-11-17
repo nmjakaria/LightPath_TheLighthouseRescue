@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 2 — Math foundation — PASS (2026-11-17). Waiting for "next" before STEP 3.
+STEP 3 — Config, stores and settings core — PASS (2026-11-17). Waiting for "next" before STEP 4.
 
 ## Step log (date · step · status · commit)
 
@@ -10,7 +10,7 @@ STEP 2 — Math foundation — PASS (2026-11-17). Waiting for "next" before STEP
 | --- | --- | --- | --- |
 | 2026-11-17 | 1 — Scaffold and tooling | PASS | 928f6e1 (scaffold, external) |
 | 2026-11-17 | 2 — Math foundation | PASS | 6e58f38 (feature) |
-| — | 3 — Config, stores and settings core | NOT STARTED | — |
+| 2026-11-17 | 3 — Config, stores and settings core | PASS | 7337454 (feature) |
 | — | 4 — UI primitives | NOT STARTED | — |
 | — | 5 — Screens and navigation | NOT STARTED | — |
 | — | 6 — Canvas foundation | NOT STARTED | — |
@@ -36,6 +36,10 @@ STEP 2 — Math foundation — PASS (2026-11-17). Waiting for "next" before STEP
 - Table 3.4 constants live in `src/lib/math/constants.ts` as Step 2 requires; `src/config/gameConfig.ts` in Step 3 will import/re-export them rather than duplicate literals.
 - `mat3.invert` returns `null` for singular matrices and non-finite determinants; callers must handle the null explicitly. `vec2.normalize` maps the zero vector to (0, 0) to avoid NaN.
 - Added an extra `src/lib/math/angles.ts` for degree/radian conversion and mirror-angle wrapping; it is needed by the optics core and keeps conversions out of the vector and matrix modules.
+- `GameSettings` includes `showFps` from AGENTS §5.3 even though the PRD §19 snippet omits it; the AGENTS schema is the fuller specification.
+- Assumed v0 settings used `volume` (0..100), `step`, `muted`, `reducedMotion`; assumed v0 progress stored `bestScore`/`bestTimeSec`/`bestMoves` directly on each level. Both shapes are documented in `docs/SETTINGS.md` and covered by migration tests.
+- `LevelRecord.best` is `ScoreRecord | null` (and best time/moves are `number | null`) because an uncompleted level has no best result; this is a minimal extension of the PRD §19 sketch.
+- Effective-environment detection uses the `useSyncExternalStore` server/client snapshot split instead of `setState` in an effect: SSR/hydration see safe defaults, then the client snapshot applies on first client render and satisfies the React lint rules.
 
 ## PRD deviations (with justification)
 
@@ -52,6 +56,11 @@ STEP 2 — Math foundation — PASS (2026-11-17). Waiting for "next" before STEP
 - No FPS, frame-time or bundle-size figures were measured in this step.
 - 2026-11-17, Node v22.22.3: `npm run test` → 20 tests passed (18 new), 5 files; `npm run lint`, `npm run typecheck`, `npm run build` pass.
 - 2026-11-17, `npm run test:coverage`: `src/lib/math` = 100% statements / branches / functions / lines (all five math files); a per-glob 90% threshold is now enforced in `vitest.config.ts`.
+
+## Step 3 measurements
+
+- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 46 tests in 8 files ✔, `next build` ✔ (2 static routes).
+- 2026-11-17, `npm run test:coverage`: all files 97.35% statements / 93.33% branches / 97.77% functions / 97.35% lines; `src/lib/math` 100%, `src/lib/settings` 100% statements, `src/lib/store` 92.45% statements. No FPS, frame-time or bundle figures measured.
 
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
@@ -74,3 +83,4 @@ STEP 2 — Math foundation — PASS (2026-11-17). Waiting for "next" before STEP
 
 AC-01: local build and `next start` verified in Step 1; Vercel deployment remains unverified.
 AC-22: Step 2 enforces ≥90% coverage on `src/lib/math`; optics, scoring and validator coverage are not yet available.
+FR-053–057: settings schema, validation, debounced/blocked-storage persistence, migrations and effective settings implemented and unit-tested in Step 3; TC-E10 and TC-F09 logic covered.
