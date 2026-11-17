@@ -41,14 +41,24 @@ export function rayVsCircle(origin: Vec2, dir: Vec2, center: Vec2, radius: numbe
   return null;
 }
 
-/** Convex polygon as a vertex list; edges are implicit and shared corners have EPS_U overlap. */
-export function rayVsPolygon(origin: Vec2, dir: Vec2, vertices: readonly Vec2[]): number | null {
-  let nearest: number | null = null;
+/** Sorted unique edge hits. Two edge hits at one vertex collapse into one, so a grazing corner is a miss. */
+export function rayVsPolygonHits(
+  origin: Vec2,
+  dir: Vec2,
+  vertices: readonly Vec2[],
+): number[] {
+  const hits: number[] = [];
   for (let index = 0; index < vertices.length; index += 1) {
     const t = rayVsSegment(origin, dir, vertices[index], vertices[(index + 1) % vertices.length]);
-    if (t !== null && (nearest === null || t < nearest)) nearest = t;
+    if (t !== null) hits.push(t);
   }
-  return nearest;
+  hits.sort((a, b) => a - b);
+  return hits.filter((t, index) => index === 0 || t - hits[index - 1] > EPS_U);
+}
+
+/** Convex polygon as a vertex list; the first distinct edge hit is the surface. */
+export function rayVsPolygon(origin: Vec2, dir: Vec2, vertices: readonly Vec2[]): number | null {
+  return rayVsPolygonHits(origin, dir, vertices)[0] ?? null;
 }
 
 /** Convex inside test: the point must lie on the same side of every directed edge. */

@@ -3,7 +3,7 @@
  * every required target to stay active for the configured hold time. */
 import { gameConfig } from "@/config/gameConfig";
 import type { HitEvent } from "@/types/optics";
-import type { LevelTargetConfig, TargetColor } from "@/types/level";
+import type { LevelSwitchConfig, LevelTargetConfig, TargetColor } from "@/types/level";
 import type { RGB } from "@/types/color";
 
 const CHANNEL_KEYS: Record<Exclude<TargetColor, "any">, keyof RGB> = {
@@ -26,6 +26,16 @@ export function eventChargesTarget(event: HitEvent, target: LevelTargetConfig): 
     event.type === "target" &&
     event.intensity >= gameConfig.targets.minIntensity &&
     colorMatches(target.requires, event.color)
+  );
+}
+
+/** Switches are momentary: active only in frames whose solved events still include a matching hit. */
+export function eventActivatesSwitch(event: HitEvent, input: LevelSwitchConfig): boolean {
+  return (
+    event.objectId === input.id &&
+    event.type === "switch" &&
+    event.intensity >= gameConfig.targets.minIntensity &&
+    colorMatches(input.requires, event.color)
   );
 }
 

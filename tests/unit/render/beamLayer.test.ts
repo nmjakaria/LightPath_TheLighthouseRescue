@@ -17,6 +17,8 @@ const palette = {
   lightGreen: "#4dff9f",
   lightBlue: "#4d9bff",
   success: "#34d399",
+  warning: "#fbbf24",
+  danger: "#f87171",
 } satisfies Palette;
 
 describe("beam colour mapping", () => {

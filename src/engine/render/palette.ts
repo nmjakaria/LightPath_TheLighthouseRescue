@@ -18,6 +18,8 @@ export const PALETTE_VARIABLES = {
   lightGreen: "--light-green",
   lightBlue: "--light-blue",
   success: "--success",
+  warning: "--warning",
+  danger: "--danger",
 } as const;
 
 export type PaletteKey = keyof typeof PALETTE_VARIABLES;

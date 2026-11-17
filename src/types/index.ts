@@ -2,7 +2,7 @@
 export type { Vec2 } from "./vec2";
 export type { RGB } from "./color";
 export type { PlayerProgress, ScoreRecord, LevelRecord, Stars } from "./progress";
-export type { InputCommand } from "./input";
+export type { InputCommand, InteractionFeedback } from "./input";
 export type {
   LevelConfig,
   LevelDifficulty,
@@ -15,10 +15,14 @@ export type {
   LevelSwitchConfig,
   LevelTargetConfig,
   LevelTutorial,
+  MovableObstacleRuntime,
+  SourceRuntime,
+  SwitchRuntime,
   TargetColor,
   TargetRuntime,
   TutorialTrigger,
 } from "./level";
+export type { GateRuntime } from "./level";
 export type {
   CircleConfig,
   GateConfig,
@@ -28,6 +32,7 @@ export type {
   MirrorConfig,
   ObstacleConfig,
   OpticsResult,
+  PrismConfig,
   OpticsScene,
   OpticsStats,
   Ray,

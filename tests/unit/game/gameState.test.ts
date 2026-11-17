@@ -71,6 +71,7 @@ describe("GameState rotation and input", () => {
     const state = freshState(locked);
     state.apply({ type: "select", id: "M1" });
     state.apply({ type: "rotateStep", direction: 1, fine: false });
+    expect(state.feedback).toBe("locked");
     dragTo(state, "M1", 135);
     expect(state.mirrors[0].angleDeg).toBe(90);
     expect(state.moves).toBe(0);

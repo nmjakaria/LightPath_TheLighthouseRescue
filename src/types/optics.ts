@@ -85,6 +85,14 @@ export interface GateConfig {
   openFraction?: number;
 }
 
+export interface PrismConfig {
+  id: string;
+  center: Vec2;
+  circumradius: number;
+  orientationDeg: number;
+  spreadDeg: number;
+}
+
 export interface CircleConfig {
   id: string;
   type: "target" | "switch" | "lamp";
@@ -97,5 +105,6 @@ export interface OpticsScene {
   mirrors: readonly MirrorConfig[];
   obstacles?: readonly ObstacleConfig[];
   gates?: readonly GateConfig[];
+  prisms?: readonly PrismConfig[];
   circles?: readonly CircleConfig[];
 }

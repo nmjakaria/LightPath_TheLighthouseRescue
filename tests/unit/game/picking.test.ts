@@ -9,10 +9,10 @@ describe("canvas picking", () => {
     expect(pickMirror({ x: 500, y: 260 }, level01.mirrors)).toBe("M2");
   });
 
-  it("deselects on empty space and ignores locked mirrors", () => {
+  it("deselects on empty space but still picks locked mirrors for feedback", () => {
     expect(pickMirror({ x: 700, y: 500 }, level01.mirrors)).toBeNull();
     const locked = level01.mirrors.map((mirror) => ({ ...mirror, rotatable: false }));
-    expect(pickMirror({ x: 500, y: 560 }, locked)).toBeNull();
+    expect(pickMirror({ x: 500, y: 560 }, locked)).toBe("M1");
   });
 
   it("computes pointer headings in screen coordinates", () => {

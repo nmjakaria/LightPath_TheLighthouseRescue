@@ -103,5 +103,10 @@ export interface LevelConfig {
   solution: readonly LevelSolutionStep[];
 }
 
-/** Targets gain charge while lit; mirrors and sources keep their level-data shape at runtime. */
+/* Runtime copies stay mutable inside the engine so level modules remain frozen data. Sources keep
+ * their rotatable heading, gates animate an open fraction, and movable obstacles hold a position. */
+export type SourceRuntime = LevelSourceConfig;
 export type TargetRuntime = LevelTargetConfig & { chargeSec: number; active: boolean };
+export type SwitchRuntime = LevelSwitchConfig & { active: boolean };
+export type GateRuntime = LevelGateConfig & { openFraction: number };
+export type MovableObstacleRuntime = LevelMovableObstacleConfig & { position: Vec2 };

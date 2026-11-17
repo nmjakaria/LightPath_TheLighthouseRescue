@@ -22,11 +22,20 @@ import { BeamLayer } from "@/engine/render/layers/BeamLayer";
 import { BackgroundLayer } from "@/engine/render/layers/BackgroundLayer";
 import { ComponentsLayer } from "@/engine/render/layers/ComponentsLayer";
 import { readPalette } from "@/engine/render/palette";
-import { pickMirror, pointerAngle } from "@/game/picking";
+import { pickComponent, pointerAngle } from "@/game/picking";
 import { createStore } from "@/lib/store/createStore";
 import type { InputCommand } from "@/types/input";
 import type { LevelConfig } from "@/types/level";
 import type { Vec2 } from "@/types/vec2";
+
+type DragMode = "rotate" | "obstacle";
+interface PendingDrag { id: string; mode: DragMode }
+
+function pendingDrag(state: GameState, ref: RefObject<PendingDrag | null>): PendingDrag | null {
+  if (ref.current) return ref.current;
+  if (state.obstacleDragId) return { id: state.obstacleDragId, mode: "obstacle" };
+  return state.dragId ? { id: state.dragId, mode: "rotate" } : null;
+}
 
 export interface GameRuntime {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -52,18 +61,14 @@ export function useGameRuntime(
   const inputRef = useRef<InputController | null>(null);
   const viewRef = useRef<ViewTransform | null>(null);
   const loopRef = useRef<GameLoop | null>(null);
-  const dragIdRef = useRef<string | null>(null);
+  const dragRef = useRef<PendingDrag | null>(null);
   const reducedMotionRef = useRef(reducedMotion);
   const rotationStepRef = useRef(rotationStepDeg);
   const store = useMemo(() => createStore(new GameState(level).snapshot()), [level]);
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 
-  useEffect(() => {
-    reducedMotionRef.current = reducedMotion;
-  }, [reducedMotion]);
-  useEffect(() => {
-    rotationStepRef.current = rotationStepDeg;
-  }, [rotationStepDeg]);
+  useEffect(() => { reducedMotionRef.current = reducedMotion; }, [reducedMotion]);
+  useEffect(() => { rotationStepRef.current = rotationStepDeg; }, [rotationStepDeg]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -142,6 +147,7 @@ export function useGameRuntime(
       inputRef.current = null;
       viewRef.current = null;
       loopRef.current = null;
+      dragRef.current = null;
     };
   }, [level, store]);
 
@@ -165,12 +171,17 @@ export function useGameRuntime(
       const input = inputRef.current;
       if (!state || !input) return;
       const point = pointerWorld(event);
-      const id = pickMirror(point, state.mirrors);
-      input.enqueue({ type: "hover", id });
-      input.enqueue({ type: "select", id });
-      if (id) {
-        dragIdRef.current = id;
-        input.enqueue({ type: "beginRotate", id });
+      const picked = pickComponent(point, state.mirrors, state.sources, state.movableObstacles);
+      input.enqueue({ type: "hover", id: picked?.id ?? null });
+      input.enqueue({ type: "select", id: picked && picked.kind !== "obstacle" ? picked.id : null });
+      if (picked) {
+        const mode: DragMode = picked.kind === "obstacle" ? "obstacle" : "rotate";
+        dragRef.current = { id: picked.id, mode };
+        input.enqueue(
+          mode === "obstacle"
+            ? { type: "beginDragObstacle", id: picked.id }
+            : { type: "beginRotate", id: picked.id },
+        );
       }
       event.currentTarget.setPointerCapture(event.pointerId);
     },
@@ -183,19 +194,32 @@ export function useGameRuntime(
       const input = inputRef.current;
       if (!state || !input) return;
       const point = pointerWorld(event);
-      input.enqueue({ type: "hover", id: pickMirror(point, state.mirrors) });
-      const id = state.dragId ?? dragIdRef.current;
-      const mirror = state.mirrors.find((candidate) => candidate.id === id);
-      if (id && mirror) input.enqueue({ type: "rotateTo", id, angleDeg: pointerAngle(point, mirror.center) });
+      const picked = pickComponent(point, state.mirrors, state.sources, state.movableObstacles);
+      input.enqueue({ type: "hover", id: picked?.id ?? null });
+      const drag = pendingDrag(state, dragRef);
+      if (!drag) return;
+      if (drag.mode === "obstacle") {
+        input.enqueue({ type: "dragObstacleTo", id: drag.id, point });
+        return;
+      }
+      const center = state.componentCenter(drag.id);
+      if (center) input.enqueue({ type: "rotateTo", id: drag.id, angleDeg: pointerAngle(point, center) });
     },
     [pointerWorld],
   );
 
   const onPointerUp = useCallback((event: PointerEvent<HTMLCanvasElement>) => {
+    const state = stateRef.current;
     const input = inputRef.current;
-    const id = stateRef.current?.dragId ?? dragIdRef.current;
-    if (input && id) input.enqueue({ type: "endRotate", id });
-    dragIdRef.current = null;
+    const drag = state ? pendingDrag(state, dragRef) : null;
+    if (input && drag) {
+      input.enqueue(
+        drag.mode === "obstacle"
+          ? { type: "endDragObstacle", id: drag.id }
+          : { type: "endRotate", id: drag.id },
+      );
+    }
+    dragRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -212,26 +236,9 @@ export function useGameRuntime(
 
   return useMemo(
     () => ({
-      containerRef,
-      canvasRef,
-      snapshot,
-      dispatch,
-      pointerWorld,
-      onPointerDown,
-      onPointerMove,
-      onPointerUp,
-      onPointerLeave,
-      getStats,
+      containerRef, canvasRef, snapshot, dispatch, pointerWorld,
+      onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats,
     }),
-    [
-      snapshot,
-      dispatch,
-      pointerWorld,
-      onPointerDown,
-      onPointerMove,
-      onPointerUp,
-      onPointerLeave,
-      getStats,
-    ],
+    [snapshot, dispatch, pointerWorld, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats],
   );
 }

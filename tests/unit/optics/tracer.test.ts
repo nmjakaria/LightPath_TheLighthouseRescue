@@ -28,7 +28,7 @@ describe("optics/tracer core (TC-G01, G03, E01-E03, E05)", () => {
     }
   });
 
-  it("applies deterministic type priority to an exact-distance tie", () => {
+  it("TC-E06: applies deterministic type priority to an exact-distance tie", () => {
     const obstacle: ObstacleConfig = {
       id: "W1",
       vertices: [

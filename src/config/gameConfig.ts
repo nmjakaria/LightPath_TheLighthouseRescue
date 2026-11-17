@@ -61,6 +61,7 @@ export interface GameConfig {
     mirrorLength: number;
     targetRadius: number;
     switchRadius: number;
+    lampHandleRadius: number;
   };
   targets: {
     activationSec: number;
@@ -85,10 +86,27 @@ export interface GameConfig {
     backgroundStars: number;
     selectionRadius: number;
     beamPasses: readonly { width: number; alpha: number; core: boolean }[];
-    lineWidth: { boundary: number; mirror: number; halo: number; target: number };
+    lineWidth: {
+      boundary: number;
+      mirror: number;
+      halo: number;
+      target: number;
+      obstacle: number;
+      gate: number;
+      prism: number;
+      switch: number;
+    };
     lampRadius: number;
     lampCoreRadius: number;
     labelFontSizePx: number;
+    labelOffsetPx: number;
+    targetCoreFraction: number;
+    chargeArcOffsetPx: number;
+    lockBadgeRadius: number;
+    handleRadius: number;
+    gateOpenAlpha: number;
+    prismInteriorWidth: number;
+    prismInteriorAlpha: number;
   };
   gateSlideSec: number;
   dtClamp: number;
@@ -118,6 +136,7 @@ export const gameConfig: GameConfig = {
     mirrorLength: MIRROR_LENGTH,
     targetRadius: TARGET_RADIUS,
     switchRadius: SWITCH_RADIUS,
+    lampHandleRadius: 22,
   },
   targets: {
     activationSec: TARGET_ACTIVATION_SEC,
@@ -150,10 +169,27 @@ export const gameConfig: GameConfig = {
       { width: 4, alpha: 0.55, core: false },
       { width: 1.5, alpha: 1, core: true },
     ],
-    lineWidth: { boundary: 2, mirror: 5, halo: 8, target: 3 },
+    lineWidth: {
+      boundary: 2,
+      mirror: 5,
+      halo: 8,
+      target: 3,
+      obstacle: 2,
+      gate: 5,
+      prism: 2,
+      switch: 3,
+    },
     lampRadius: 16,
     lampCoreRadius: 6,
     labelFontSizePx: 12,
+    labelOffsetPx: 8,
+    targetCoreFraction: 1 / 3,
+    chargeArcOffsetPx: 6,
+    lockBadgeRadius: 5,
+    handleRadius: 5,
+    gateOpenAlpha: 0.15,
+    prismInteriorWidth: 2,
+    prismInteriorAlpha: 0.35,
   },
   gateSlideSec: GATE_SLIDE_SEC,
   dtClamp: DT_CLAMP,

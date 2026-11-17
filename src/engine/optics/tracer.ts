@@ -6,28 +6,17 @@
  */
 import { gameConfig } from "@/config/gameConfig";
 import { normalizeAngle, radToDeg } from "@/lib/math/angles";
-import {
-  MAX_BOUNCES,
-  MAX_SEGMENTS,
-  MIN_INTENSITY,
-  MIRROR_REFLECTANCE,
-  OFFSET,
-} from "@/lib/math/constants";
+import { MAX_BOUNCES, MAX_SEGMENTS, MIN_INTENSITY, MIRROR_REFLECTANCE, OFFSET } from "@/lib/math/constants";
+import { prismChildren, WHITE_LIGHT } from "@/game/prism";
 import { add, headingToVec, scale } from "@/lib/math/vec2";
 import type { HitEvent, OpticsResult, OpticsScene, Ray, Segment } from "@/types/optics";
 import type { Vec2 } from "@/types/vec2";
+import { rayVsPolygonHits } from "./intersect";
 import { reflect } from "./reflect";
-import {
-  buildPrimitives,
-  createTerminations,
-  nearestHit,
-  warnInvalid,
-} from "./primitives";
+import { buildPrimitives, createTerminations, nearestHit, warnInvalid } from "./primitives";
 import { getSourceOrigin, isFinitePoint } from "./transform";
 
-interface WorkRay extends Ray {
-  seen: Set<string>;
-}
+interface WorkRay extends Ray { seen: Set<string> }
 
 type Clock = () => number;
 const defaultClock: Clock = () =>
@@ -57,6 +46,52 @@ function createInitialRay(source: OpticsScene["sources"][number]): WorkRay | nul
     sourceId: source.id,
     seen: new Set<string>(),
   };
+}
+
+function prismExit(ray: WorkRay, vertices: readonly Vec2[], terminated: Record<string, number>): Vec2 | null {
+  const crossings = rayVsPolygonHits(ray.origin, ray.dir, vertices);
+  if (crossings.length < 2) {
+    terminated.prism += 1; // A single vertex hit is a miss in the simplified model.
+    return null;
+  }
+  const exit = add(ray.origin, scale(ray.dir, crossings[1]));
+  if (!isFinitePoint(exit)) {
+    terminated.invalid += 1;
+    return null;
+  }
+  return exit;
+}
+
+function prismSpreadFor(scene: OpticsScene, prismId: string): number {
+  const levelValue = scene.prisms?.find((prism) => prism.id === prismId)?.spreadDeg;
+  return levelValue ?? gameConfig.optics.prismSpreadDeg;
+}
+
+function enqueuePrismChildren(
+  ray: WorkRay,
+  prismId: string,
+  exit: Vec2,
+  spreadDeg: number,
+  queue: WorkRay[],
+  terminated: Record<string, number>,
+): void {
+  for (const child of prismChildren(ray, spreadDeg)) {
+    if (!isFinitePoint(child.dir) || !Number.isFinite(child.intensity)) {
+      terminated.invalid += 1;
+      continue;
+    }
+    queue.push({
+      origin: add(exit, scale(child.dir, OFFSET)),
+      dir: child.dir,
+      color: child.color,
+      intensity: child.intensity,
+      bounce: ray.bounce + 1,
+      skipId: prismId,
+      sourceId: ray.sourceId,
+      // A copy keeps independent fans from sharing repeat-state histories.
+      seen: new Set(ray.seen),
+    });
+  }
 }
 
 /** Solves all sources against one immutable snapshot of scene geometry. */
@@ -138,6 +173,33 @@ export function solveOptics(scene: OpticsScene, clock: Clock = defaultClock): Op
       continue;
     }
     ray.seen.add(key);
+
+    if (hit.primitive.type === "prism") {
+      const exit = prismExit(ray, hit.primitive.vertices, terminated);
+      if (!exit) continue;
+      if (segmentCount >= MAX_SEGMENTS) {
+        terminated.segmentCap += 1;
+        continue;
+      }
+      segments[segmentCount] = {
+        a: point,
+        b: exit,
+        color: WHITE_LIGHT,
+        intensity: ray.intensity,
+        bounce: ray.bounce,
+        kind: "prismInterior",
+      };
+      segmentCount += 1;
+      enqueuePrismChildren(
+        ray,
+        hit.primitive.id,
+        exit,
+        prismSpreadFor(scene, hit.primitive.id),
+        queue,
+        terminated,
+      );
+      continue;
+    }
 
     if (hit.primitive.type !== "mirror") {
       terminated[hit.primitive.type] += 1;

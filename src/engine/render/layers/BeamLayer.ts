@@ -1,5 +1,5 @@
-/* Three-pass additive glow: a wide tinted halo, a narrow coloured body and a white core. Passes
- * are drawn with 'lighter' compositing so overlapping beams brighten additively (PRD §12.4). */
+/* Three-pass additive glow: a wide tinted halo, a narrow coloured body and a white core. Prism
+ * interiors use one faint white pass because PRD §12.9 asks for a visible but subtle inside path. */
 import { gameConfig } from "@/config/gameConfig";
 import type { GameState } from "@/engine/core/GameState";
 import type { RGB } from "@/types/color";
@@ -28,7 +28,10 @@ export class BeamLayer implements Layer {
     ctx.globalCompositeOperation = "lighter";
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    for (const segment of this.state.result.segments) this.drawSegment(ctx, segment);
+    for (const segment of this.state.result.segments) {
+      if (segment.kind === "prismInterior") this.drawInterior(ctx, segment);
+      else this.drawSegment(ctx, segment);
+    }
     ctx.restore();
   }
 
@@ -38,10 +41,21 @@ export class BeamLayer implements Layer {
       ctx.strokeStyle = pass.core ? this.palette.beamCore : color;
       ctx.globalAlpha = pass.alpha * Math.min(1, Math.max(0, segment.intensity));
       ctx.lineWidth = pass.width;
-      ctx.beginPath();
-      ctx.moveTo(segment.a.x, segment.a.y);
-      ctx.lineTo(segment.b.x, segment.b.y);
-      ctx.stroke();
+      this.trace(ctx, segment);
     }
+  }
+
+  private drawInterior(ctx: CanvasRenderingContext2D, segment: Segment): void {
+    ctx.strokeStyle = this.palette.beamCore;
+    ctx.globalAlpha = gameConfig.render.prismInteriorAlpha * Math.min(1, Math.max(0, segment.intensity));
+    ctx.lineWidth = gameConfig.render.prismInteriorWidth;
+    this.trace(ctx, segment);
+  }
+
+  private trace(ctx: CanvasRenderingContext2D, segment: Segment): void {
+    ctx.beginPath();
+    ctx.moveTo(segment.a.x, segment.a.y);
+    ctx.lineTo(segment.b.x, segment.b.y);
+    ctx.stroke();
   }
 }

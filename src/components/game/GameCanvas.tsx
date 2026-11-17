@@ -44,7 +44,7 @@ export function GameCanvas({ levelId = "level-01" }: { levelId?: string }) {
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label={`${level.name} optical puzzle. Drag a mirror ring to rotate it.`}
+        aria-label={`${level.name} optical puzzle. Drag a mirror or lamp to rotate it; drag a rock along its rail.`}
         className="block h-full w-full touch-none"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -64,6 +64,18 @@ export function GameCanvas({ levelId = "level-01" }: { levelId?: string }) {
           {snapshot.moves} moves · {snapshot.timeSec.toFixed(1)} s · {snapshot.litTargets}/
           {snapshot.requiredTargets} lit
         </p>
+        {(snapshot.litSwitches > 0 || snapshot.openGates > 0) && (
+          <p className="mt-1 font-mono text-xs text-mist">
+            {snapshot.litSwitches} switches · {snapshot.openGates} gates open
+          </p>
+        )}
+        {snapshot.feedback && (
+          <p role="status" className="mt-1 text-xs text-warning">
+            {snapshot.feedback === "locked"
+              ? "That component is locked."
+              : "The rock stays within its rail."}
+          </p>
+        )}
         <div className="mt-3 flex gap-2">
           <Button size="sm" variant="secondary" disabled={!snapshot.canUndo} onClick={() => dispatch({ type: "undo" })}>
             Undo

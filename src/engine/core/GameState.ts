@@ -1,20 +1,27 @@
 /*
- * Mutable engine state kept outside React. All changes arrive as commands, a dirty flag gates the
- * optics solve, and target charge is integrated with the clamped frame dt. Snapshots are small
- * immutable objects published to React at a low rate; React never renders per frame (PRD §12.8).
+ * Mutable engine state kept outside React. Interaction is delegated to GameInteraction; this class
+ * owns level systems, the dirty-flag solve, gate animation, target charge and completion. React
+ * receives only a low-rate HUD snapshot (PRD §12.8, FR-022–037).
  */
 import { gameConfig } from "@/config/gameConfig";
-import { eventChargesTarget, nextCharge } from "@/game/targets";
-import { MIRROR_PERIOD_DEG } from "@/lib/math/constants";
-import { snapAngle } from "@/lib/math/angles";
+import { approachOpenFraction, gateBlocks } from "@/game/gates";
+import { initialGeometry } from "@/game/geometry";
+import { worldVertices } from "@/game/movableObstacles";
+import { eventActivatesSwitch, eventChargesTarget, nextCharge } from "@/game/targets";
 import { solveOptics } from "@/engine/optics/tracer";
-import { UndoStack } from "./UndoStack";
-import type { InputCommand } from "@/types/input";
-import type { LevelConfig, LevelMirrorConfig, TargetRuntime } from "@/types/level";
+import { GameInteraction } from "./GameInteraction";
+import type { InputCommand, InteractionFeedback } from "@/types/input";
+import type {
+  GateRuntime,
+  LevelConfig,
+  LevelMirrorConfig,
+  MovableObstacleRuntime,
+  SourceRuntime,
+  SwitchRuntime,
+  TargetRuntime,
+} from "@/types/level";
 import type { OpticsResult, OpticsScene } from "@/types/optics";
-
-interface GeometrySnapshot { angles: readonly number[] }
-interface DragState { id: string; originalAngleDeg: number; before: GeometrySnapshot }
+import type { Vec2 } from "@/types/vec2";
 
 export interface HudSnapshot {
   levelId: string;
@@ -25,6 +32,9 @@ export interface HudSnapshot {
   status: "playing" | "complete";
   litTargets: number;
   requiredTargets: number;
+  litSwitches: number;
+  openGates: number;
+  feedback: InteractionFeedback | null;
   canUndo: boolean;
 }
 
@@ -37,11 +47,13 @@ function emptyResult(): OpticsResult {
 }
 
 export class GameState {
+  readonly sources: SourceRuntime[];
   readonly mirrors: LevelMirrorConfig[];
+  readonly movableObstacles: MovableObstacleRuntime[];
+  readonly switches: SwitchRuntime[];
+  readonly gates: GateRuntime[];
   readonly targets: TargetRuntime[];
-  selectedId: string | null = null;
-  hoveredId: string | null = null;
-  moves = 0;
+  readonly interaction: GameInteraction;
   elapsedSec = 0;
   status: "playing" | "complete" = "playing";
   dirty = true;
@@ -49,8 +61,6 @@ export class GameState {
   result: OpticsResult = emptyResult();
   rotationStepDeg: number;
 
-  private readonly undo = new UndoStack<GeometrySnapshot>();
-  private drag: DragState | null = null;
   private holdSec = 0;
 
   constructor(
@@ -58,13 +68,33 @@ export class GameState {
     rotationStepDeg: number = gameConfig.interaction.rotationStepDeg,
   ) {
     this.rotationStepDeg = rotationStepDeg;
+    this.sources = level.sources.map((source) => ({ ...source, color: { ...source.color } }));
     this.mirrors = level.mirrors.map((mirror) => ({ ...mirror }));
+    this.movableObstacles = level.movableObstacles.map((obstacle) => ({
+      ...obstacle,
+      start: { ...obstacle.start },
+      localVertices: obstacle.localVertices.map((vertex) => ({ ...vertex })),
+      position: { ...obstacle.start },
+    }));
+    this.switches = level.switches.map((input) => ({ ...input, active: false }));
+    this.gates = level.gates.map((gate) => ({ ...gate, openFraction: 0 }));
     this.targets = level.targets.map((target) => ({ ...target, chargeSec: 0, active: false }));
+    this.interaction = new GameInteraction({
+      components: { mirrors: this.mirrors, sources: this.sources, movableObstacles: this.movableObstacles },
+      stepDeg: () => this.level.rotationStepDeg ?? this.rotationStepDeg,
+      onGeometryChange: () => { this.dirty = true; },
+    });
   }
 
-  get dragId(): string | null {
-    return this.drag?.id ?? null;
-  }
+  get selectedId(): string | null { return this.interaction.selectedId; }
+  get hoveredId(): string | null { return this.interaction.hoveredId; }
+  get moves(): number { return this.interaction.moves; }
+  get feedback(): InteractionFeedback | null { return this.interaction.feedback; }
+  get dragId(): string | null { return this.interaction.dragId; }
+  get obstacleDragId(): string | null { return this.interaction.obstacleDragId; }
+
+  kindOf(id: string | null): "mirror" | "source" | "obstacle" | null { return this.interaction.kindOf(id); }
+  componentCenter(id: string | null): Vec2 | null { return this.interaction.componentCenter(id); }
 
   snapshot(): HudSnapshot {
     return {
@@ -76,42 +106,24 @@ export class GameState {
       status: this.status,
       litTargets: this.targets.filter((target) => target.active).length,
       requiredTargets: this.targets.filter((target) => target.required).length,
-      canUndo: this.undo.size > 0 || this.drag !== null,
+      litSwitches: this.switches.filter((input) => input.active).length,
+      openGates: this.gates.filter((gate) => !gateBlocks(gate.openFraction)).length,
+      feedback: this.feedback,
+      canUndo: this.interaction.canUndo,
     };
   }
 
-  /** Single entry point for queued input; completion freezes play input but still allows hover. */
+  /** Completion freezes play input but still allows hover feedback. */
   apply(command: InputCommand): void {
     if (this.status === "complete" && command.type !== "hover") return;
-    switch (command.type) {
-      case "hover":
-        this.hoveredId = command.id;
-        return;
-      case "select":
-        this.selectedId = this.mirror(command.id) ? command.id : null;
-        return;
-      case "beginRotate":
-        this.beginRotate(command.id);
-        return;
-      case "rotateTo":
-        this.rotateTo(command.id, command.angleDeg);
-        return;
-      case "endRotate":
-        this.commitDrag(command.id);
-        return;
-      case "rotateStep":
-        this.rotateStep(command.direction, command.fine);
-        return;
-      case "undo":
-        this.undoLast();
-        return;
-      case "reset":
-        this.reset();
-        return;
+    if (command.type === "reset") {
+      this.reset();
+      return;
     }
+    this.interaction.apply(command);
   }
 
-  /** Advances timers, solves only when geometry changed, then charges targets. */
+  /** Solves only when geometry changed, then advances switches, gates and target charge. */
   tick(dt: number): void {
     if (this.status === "complete" || !Number.isFinite(dt) || dt < 0) return;
     this.elapsedSec += dt;
@@ -120,94 +132,18 @@ export class GameState {
       this.solveCount += 1;
       this.dirty = false;
     }
+    this.updateSwitchesAndGates(dt);
     this.updateTargets(dt);
   }
 
-  private mirror(id: string | null): LevelMirrorConfig | undefined {
-    return this.mirrors.find((candidate) => candidate.id === id);
-  }
-
-  private stepFor(mirror: LevelMirrorConfig, fine: boolean): number {
-    if (!fine) return this.level.rotationStepDeg ?? this.rotationStepDeg;
-    return Math.min(gameConfig.interaction.fineStepDeg, this.rotationStepDeg);
-  }
-
-  private geometry(): GeometrySnapshot {
-    return { angles: this.mirrors.map((mirror) => mirror.angleDeg) };
-  }
-
-  private restore(snapshot: GeometrySnapshot): void {
-    this.mirrors.forEach((mirror, index) => {
-      mirror.angleDeg = snapshot.angles[index];
-    });
-    this.dirty = true;
-  }
-
-  private setAngle(id: string, angleDeg: number, fine: boolean): boolean {
-    const target = this.mirror(id);
-    if (!target || !target.rotatable) return false;
-    const snapped = snapAngle(angleDeg, this.stepFor(target, fine), MIRROR_PERIOD_DEG);
-    if (snapped === target.angleDeg) return false;
-    target.angleDeg = snapped;
-    this.dirty = true;
-    return true;
-  }
-
-  private beginRotate(id: string): void {
-    const target = this.mirror(id);
-    if (!target?.rotatable) return;
-    this.selectedId = id;
-    this.drag = { id, originalAngleDeg: target.angleDeg, before: this.geometry() };
-  }
-
-  private rotateTo(id: string, angleDeg: number): void {
-    if (this.drag?.id !== id) return;
-    this.setAngle(id, angleDeg, false);
-  }
-
-  private commitDrag(id: string): void {
-    if (this.drag?.id !== id) return;
-    const changed = this.mirror(id)?.angleDeg !== this.drag.originalAngleDeg;
-    if (changed) {
-      this.undo.push(this.drag.before);
-      this.moves += 1;
-    }
-    this.drag = null;
-  }
-
-  private rotateStep(direction: -1 | 1, fine: boolean): void {
-    const id = this.selectedId;
-    if (!id) return;
-    const target = this.mirror(id);
-    if (!target?.rotatable) return;
-    const before = this.geometry();
-    const step = this.stepFor(target, fine);
-    if (this.setAngle(id, target.angleDeg + direction * step, fine)) {
-      this.undo.push(before);
-      this.moves += 1;
-    }
-  }
-
-  private undoLast(): void {
-    if (this.drag) {
-      this.restore(this.drag.before);
-      this.drag = null;
-      return;
-    }
-    const previous = this.undo.pop();
-    if (previous) this.restore(previous);
-  }
-
   private reset(): void {
-    this.restore({ angles: this.level.mirrors.map((mirror) => mirror.angleDeg) });
-    this.undo.clear();
-    this.drag = null;
-    this.selectedId = null;
-    this.moves = 0;
+    this.interaction.reset(initialGeometry(this.level));
     this.elapsedSec = 0;
     this.holdSec = 0;
     this.status = "playing";
     this.result = emptyResult();
+    for (const input of this.switches) input.active = false;
+    for (const gate of this.gates) gate.openFraction = 0;
     for (const target of this.targets) {
       target.chargeSec = 0;
       target.active = false;
@@ -215,17 +151,43 @@ export class GameState {
   }
 
   private opticsScene(): OpticsScene {
+    const obstacles = [
+      ...this.level.obstacles,
+      ...this.movableObstacles.map((obstacle) => ({ id: obstacle.id, vertices: worldVertices(obstacle) })),
+    ];
     return {
-      sources: this.level.sources,
+      sources: this.sources,
       mirrors: this.mirrors,
-      obstacles: this.level.obstacles,
-      circles: this.targets.map((target) => ({
-        id: target.id,
-        type: "target" as const,
-        center: target.center,
-        radius: target.radius,
-      })),
+      obstacles,
+      gates: this.gates,
+      prisms: this.level.prisms,
+      circles: [
+        ...this.targets.map((target) => ({
+          id: target.id, type: "target" as const, center: target.center, radius: target.radius,
+        })),
+        ...this.switches.map((input) => ({
+          id: input.id, type: "switch" as const, center: input.center, radius: input.radius,
+        })),
+        ...this.sources.map((source) => ({
+          id: source.id,
+          type: "lamp" as const,
+          center: source.position,
+          radius: source.housingRadius ?? gameConfig.optics.lampHousingRadius,
+        })),
+      ],
     };
+  }
+
+  private updateSwitchesAndGates(dt: number): void {
+    for (const input of this.switches) {
+      input.active = this.result.events.some((event) => eventActivatesSwitch(event, input));
+    }
+    for (const gate of this.gates) {
+      const linked = this.switches.find((input) => input.gateId === gate.id);
+      const wasBlocking = gateBlocks(gate.openFraction);
+      gate.openFraction = approachOpenFraction(gate.openFraction, linked?.active ? 1 : 0, dt);
+      if (wasBlocking !== gateBlocks(gate.openFraction)) this.dirty = true;
+    }
   }
 
   private updateTargets(dt: number): void {

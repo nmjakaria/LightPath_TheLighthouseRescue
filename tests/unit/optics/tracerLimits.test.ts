@@ -64,13 +64,21 @@ describe("optics/tracer termination limits", () => {
     }
   });
 
-  it("traces a four-bounce chain through a target", () => {
+  it("TC-G06: traces a four-bounce chain through reference hit points", () => {
     const result = solveOptics(fourMirrorScene());
     expect(result.stats.segmentCount).toBe(5);
     expect(result.stats.maxBounce).toBe(4);
     expect(result.events.map((event) => event.objectId)).toEqual([
       "M1", "M2", "M3", "M4", "T1",
     ]);
+    const expected = [
+      { x: 400, y: 600 }, { x: 400, y: 300 }, { x: 800, y: 300 },
+      { x: 800, y: 150 }, { x: 972, y: 150 },
+    ];
+    result.events.forEach((event, index) => {
+      expect(event.point.x).toBeCloseTo(expected[index].x, 0);
+      expect(event.point.y).toBeCloseTo(expected[index].y, 0);
+    });
     expect(result.stats.terminated.target).toBe(1);
   });
 });
