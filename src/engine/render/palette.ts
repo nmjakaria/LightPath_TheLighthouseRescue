@@ -14,6 +14,9 @@ export const PALETTE_VARIABLES = {
   softWhite: "--soft-white",
   mist: "--mist",
   starGold: "--star-gold",
+  lightRed: "--light-red",
+  lightGreen: "--light-green",
+  lightBlue: "--light-blue",
   success: "--success",
 } as const;
 

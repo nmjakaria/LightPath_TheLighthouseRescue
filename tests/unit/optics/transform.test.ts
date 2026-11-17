@@ -69,7 +69,7 @@ describe("optics/transform", () => {
       color: { r: 1, g: 1, b: 1 },
       intensity: 1,
     };
-    expect(getSourceOrigin(source)).toEqual({ x: 138, y: 560 });
+    expect(getSourceOrigin(source)).toEqual({ x: 136, y: 560 });
     const down = getSourceOrigin({ ...source, headingDeg: 90, housingRadius: 10 });
     expect(down.x).toBeCloseTo(120, 9);
     expect(down.y).toBeCloseTo(570, 9);

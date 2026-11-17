@@ -8,6 +8,7 @@ export const uiConfig = {
   routeFadeMs: 250,
   lockShakeMs: 400,
   fpsRefreshMs: 250,
+  hudRefreshMs: 100,
   progressRing: {
     size: 72,
     strokeWidth: 6,

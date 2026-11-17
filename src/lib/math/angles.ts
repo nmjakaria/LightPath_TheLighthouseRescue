@@ -29,3 +29,10 @@ export function normalizeAngle(angle: number, period: number = FULL_TURN_DEG): n
 export function normalizeMirrorAngle(deg: number): number {
   return normalizeAngle(deg, MIRROR_PERIOD_DEG);
 }
+
+/** Rounds to the nearest step and wraps into one period; mirrors pass a 180° period. */
+export function snapAngle(deg: number, step: number, period: number = FULL_TURN_DEG): number {
+  if (!Number.isFinite(deg) || step <= 0 || period <= 0) return 0;
+  const scaled = Math.round(normalizeAngle(deg, period) / step);
+  return normalizeAngle(scaled * step, period);
+}

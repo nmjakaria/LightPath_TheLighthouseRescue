@@ -79,7 +79,17 @@ export interface GameConfig {
   };
   quality: Record<QualityPreset, QualityPresetValues>;
   storage: { writeDebounceMs: number };
-  render: { maxDpr: number; fpsSmoothing: number; backgroundStars: number; selectionRadius: number };
+  render: {
+    maxDpr: number;
+    fpsSmoothing: number;
+    backgroundStars: number;
+    selectionRadius: number;
+    beamPasses: readonly { width: number; alpha: number; core: boolean }[];
+    lineWidth: { boundary: number; mirror: number; halo: number; target: number };
+    lampRadius: number;
+    lampCoreRadius: number;
+    labelFontSizePx: number;
+  };
   gateSlideSec: number;
   dtClamp: number;
 }
@@ -98,7 +108,7 @@ export const gameConfig: GameConfig = {
     mixedThreshold: MIXED_THRESHOLD,
     repeatPositionGrid: 0.5,
     repeatAngleGridDeg: 0.5,
-    lampHousingRadius: 18,
+    lampHousingRadius: 16,
     gateOpenFraction: 0.5,
   },
   interaction: {
@@ -130,7 +140,21 @@ export const gameConfig: GameConfig = {
     high: { particleCap: 400, moteCap: 80, glowPasses: 3, waterLayers: 4 },
   },
   storage: { writeDebounceMs: 150 },
-  render: { maxDpr: 2, fpsSmoothing: 0.1, backgroundStars: 48, selectionRadius: 18 },
+  render: {
+    maxDpr: 2,
+    fpsSmoothing: 0.1,
+    backgroundStars: 48,
+    selectionRadius: 18,
+    beamPasses: [
+      { width: 10, alpha: 0.18, core: false },
+      { width: 4, alpha: 0.55, core: false },
+      { width: 1.5, alpha: 1, core: true },
+    ],
+    lineWidth: { boundary: 2, mirror: 5, halo: 8, target: 3 },
+    lampRadius: 16,
+    lampCoreRadius: 6,
+    labelFontSizePx: 12,
+  },
   gateSlideSec: GATE_SLIDE_SEC,
   dtClamp: DT_CLAMP,
 };

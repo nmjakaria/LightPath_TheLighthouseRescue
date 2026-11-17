@@ -2,6 +2,23 @@
 export type { Vec2 } from "./vec2";
 export type { RGB } from "./color";
 export type { PlayerProgress, ScoreRecord, LevelRecord, Stars } from "./progress";
+export type { InputCommand } from "./input";
+export type {
+  LevelConfig,
+  LevelDifficulty,
+  LevelGateConfig,
+  LevelMirrorConfig,
+  LevelObstacleConfig,
+  LevelPrismConfig,
+  LevelSolutionStep,
+  LevelSourceConfig,
+  LevelSwitchConfig,
+  LevelTargetConfig,
+  LevelTutorial,
+  TargetColor,
+  TargetRuntime,
+  TutorialTrigger,
+} from "./level";
 export type {
   CircleConfig,
   GateConfig,
