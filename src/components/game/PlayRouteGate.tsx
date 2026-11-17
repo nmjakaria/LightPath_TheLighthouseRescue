@@ -5,12 +5,13 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { levelById } from "@/config/levelCatalog";
-import { Button, useToast } from "@/components/ui";
+import { useToast } from "@/components/ui";
 import { useClientReady } from "@/hooks/useClientReady";
 import { useProgress } from "@/hooks/useProgress";
 import { useSettings } from "@/hooks/useSettings";
 import { lockedLevelMessage, parseLevelId } from "@/game/levelNavigation";
 import { BackButton } from "./BackButton";
+import { GameCanvas } from "./GameCanvas";
 import { ScreenShell } from "./ScreenShell";
 
 export function PlayRouteGate({ levelId }: { levelId: string }) {
@@ -51,23 +52,14 @@ export function PlayRouteGate({ levelId }: { levelId: string }) {
   }
 
   return (
-    <ScreenShell>
-      <header className="mb-8 flex items-center justify-between gap-4">
-        <div>
-          <p className="font-mono text-xs uppercase tracking-widest text-cyan-beam">Level {index}</p>
-          <h1 className="font-display text-4xl font-semibold text-beam-core">{level?.name}</h1>
-        </div>
-        <BackButton href="/levels" label="Level selection" />
-      </header>
-
-      <div className="rounded-card border border-navy-line bg-deep-navy p-8 text-center">
-        <p className="text-base leading-relaxed text-mist">
-          This level is unlocked and ready. The playable canvas arrives in STEP 8.
+    <div className="relative h-screen w-screen overflow-hidden bg-abyss">
+      <GameCanvas />
+      <div className="absolute left-4 top-4 z-10 rounded-card border border-navy-line bg-midnight/80 px-3 py-2">
+        <p className="mb-1 font-mono text-xs uppercase tracking-widest text-cyan-beam">
+          Level {index} · {level?.name}
         </p>
-        <Button className="mt-6" onClick={() => router.push("/levels")}>
-          Back to levels
-        </Button>
+        <BackButton href="/levels" label="Level selection" />
       </div>
-    </ScreenShell>
+    </div>
   );
 }

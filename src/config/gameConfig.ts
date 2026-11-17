@@ -75,6 +75,7 @@ export interface GameConfig {
   };
   quality: Record<QualityPreset, QualityPresetValues>;
   storage: { writeDebounceMs: number };
+  render: { maxDpr: number; fpsSmoothing: number; backgroundStars: number; selectionRadius: number };
   gateSlideSec: number;
   dtClamp: number;
 }
@@ -121,6 +122,7 @@ export const gameConfig: GameConfig = {
     high: { particleCap: 400, moteCap: 80, glowPasses: 3, waterLayers: 4 },
   },
   storage: { writeDebounceMs: 150 },
+  render: { maxDpr: 2, fpsSmoothing: 0.1, backgroundStars: 48, selectionRadius: 18 },
   gateSlideSec: GATE_SLIDE_SEC,
   dtClamp: DT_CLAMP,
 };
