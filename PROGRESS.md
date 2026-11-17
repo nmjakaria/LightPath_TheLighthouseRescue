@@ -80,7 +80,7 @@ STEP 5 — Screens and navigation — PARTIAL (2026-11-17). Implementation + gat
 
 ## Step 5 measurements
 
-- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 118 tests in 16 files ✔ (24 new), `next build` ✔. Build output: 9 static routes plus `/play/[levelId]` as partial prerender.
+- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 118 tests in 16 files ✔ (24 new), `next build` ✔. Build output: 7 static routes plus `/play/[levelId]` as partial prerender.
 - 2026-11-17, production server on ports 3105/3106: `/`, `/levels`, `/how-to-play`, `/settings`, `/about` and `/play/level-01` all returned HTTP 200; expected screen text was present. React inserts HTML comments between interpolated text nodes, so the version appears as `v<!-- -->0.1.0` in raw HTML.
 - 2026-11-17: largest Step 5 React component is `LevelSelection.tsx` at 87 lines (budget 120); `SettingRow.tsx` is 86 lines. No FPS, frame-time or bundle-size figures measured.
 
