@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 9 — Remaining mechanics — PARTIAL (2026-11-17). Implementation, full gate and all logic checks passed; real-browser mouse/keyboard playthrough remains unverified. Waiting for "next" before STEP 10.
+STEP 10 — Game rules, five levels, progression — PARTIAL (2026-11-17). Implementation, full gate, solution replay 5/5 and coverage all pass; real-browser mouse/keyboard/visual checks remain unverified. Waiting for "next" before STEP 11.
 
 ## Step log (date · step · status · commit)
 
@@ -17,7 +17,7 @@ STEP 9 — Remaining mechanics — PARTIAL (2026-11-17). Implementation, full ga
 | 2026-11-17 | 7 — Optics core | PASS | 8811c38 (feature) |
 | 2026-11-17 | 8 — Level 1 playable | PARTIAL | e519bd4 (feature) |
 | 2026-11-17 | 9 — Remaining mechanics | PARTIAL | 9e70f23 (feature) |
-| — | 10 — Game rules, five levels, progression | NOT STARTED | — |
+| 2026-11-17 | 10 — Game rules, five levels, progression | PARTIAL | 7dec7aa (feature) |
 | — | 11 — Visual polish | NOT STARTED | — |
 | — | 12 — Audio | NOT STARTED | — |
 | — | 13 — Optics Inspector | NOT STARTED | — |
@@ -77,6 +77,16 @@ STEP 9 — Remaining mechanics — PARTIAL (2026-11-17). Implementation, full ga
 - `rayVsPolygonHits()` collapses duplicate edge hits within `EPS_U`, so an exact polygon-corner hit becomes one surface hit and does not leak a second segment. A prism ray that only touches a vertex without a distinct exit produces no fan.
 - The prism unit test uses `orientationDeg: 30` so the ray enters and exits through two distinct faces; a right-facing triangle at `0°` grazes a vertex and is not a valid dispersion scene.
 - Real-browser dragging of movable obstacles, lamps and switch/gate feedback was not measured; TC-F06/F07/F14, TC-G05–G07, TC-E04/E06 and TC-X05/X06 are covered by deterministic unit scenes only.
+- Step 10 scoring uses the PRD §10.8 formula verbatim (base 1000 − 2/s over par − 15/move over par − 100/hint, each effort penalty capped at 300, floor 100; 3★ ≥ 800, 2★ ≥ 500). Penalties are calculated once at completion and frozen into the saved `ScoreRecord`; the four star-boundary cases are tested explicitly.
+- The `solution` array on each level is the single source of truth for both hint tiers and TC-F13 replay. Replay uses real `InputCommand`s, so a solution can only pass if it is actually reachable by a player (including snapping and drag commit).
+- Mirror solution angles compare modulo 180° in `hints.ts`; lamps compare modulo 360°. A fourth hint press is ignored, and reset intentionally keeps `hintsUsed` so a player cannot erase the score penalty by restarting.
+- The timer starts on the first play command (a hint counts), stops while paused and after completion, and restarts on reset. Pause/hint/pauseToggle are engine commands rather than player actions, so they never start the clock by themselves.
+- Level 3 and Level 5 prisms use `circumradius: 56`, `orientationDeg: 30`, `spreadDeg: 12` so an eastward beam enters and exits two distinct faces (the same geometry already proven by `prism.test.ts`). This is a layout choice, not a PRD coordinate deviation.
+- Level 5's movable rock solution is `{ x: 680, y: 540 }`; the authored `start` is `{ x: 720, y: 540 }` with a 560–1000 rail and 20 wu snap. All five PRD reference layouts validate and replay without coordinate changes, so PRD deviations remain empty.
+- Completion now always builds a `CompletionSummary` (result + record); Level 5 adds a 2 s celebration via `celebrationSec` from `gameConfig.completion.finaleSec` before the result modal appears. Progress is saved exactly once from `GameCanvas` using a ref guard.
+- Validation errors block level loading and render `LevelError`; spacing overlaps remain warnings because PRD A-10 permits playtest nudges. `levelValidator.ts` was split into `validationTypes.ts`, `levelValidatorFields.ts` and `levelValidatorSpacing.ts` to meet the 250-line budget.
+- HUD derivation moved to `engine/core/hud.ts` and solver-scene assembly to `game/opticsScene.ts` so `GameState.ts` stays at exactly 250 lines; `GameCanvas.tsx` contains two small components (each under 120 lines), not one oversized one.
+- Real-browser HUD readability, pause/result focus behaviour, tutorial toasts, level unlock after completion and celebration timing were not verified without browser automation. Unit tests cover score records, unlock derivation, timer/pause, hint tiers, validation and all five solution replays.
 
 ## PRD deviations (with justification)
 
@@ -144,6 +154,15 @@ STEP 9 — Remaining mechanics — PARTIAL (2026-11-17). Implementation, full ga
 - 2026-11-17: largest Step 9 source file is `useGameRuntime.ts` at 244 lines, then `tracer.ts` 243, `GameInteraction.ts` 232, `GameState.ts` 210, `ComponentsLayer.ts` 126, `componentShapes.ts` 115 and `GameCanvas.tsx` 103; all under the AGENTS budgets (250/250/120).
 - TC-F04/F05/G07/X05 are covered by `prism.test.ts`; TC-F06/F14/X06 by `mechanics.test.ts` + `gates.test.ts`; TC-F07/G05/E04 by `mechanics.test.ts` (optics); TC-G06 by `tracerLimits.test.ts`; TC-E06 by `tracer.test.ts`; movable-obstacle, rotatable-lamp and locked-feedback scenes live in `interaction.test.ts`.
 
+## Step 10 measurements
+
+- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 249 tests in 42 files ✔ (33 new), `next build` ✔ (7 static routes plus `/play/[levelId]` partial prerender).
+- 2026-11-17, `npm run test:coverage`: all files 94.13% statements / 86.74% branches / 97.94% functions / 94.13% lines; `engine/optics` 93.66% statements / 91.21% branches; `game` 92.91% statements / 80.96% branches; `scoring.ts` 100% statements / 90% branches; `levelValidator.ts` 98.66% statements / 82.35% branches; `completion.ts`, `geometry.ts`, `opticsScene.ts`, `targets.ts` 100%.
+- 2026-11-17, solution replay (`tests/unit/levels/solutions.test.ts`): 5/5 levels validate with zero errors, 5/5 do not start solved after 3 s idle, 5/5 complete after their authored solution is replayed (15/15 checks).
+- 2026-11-17, 500 four-mirror solves without coverage instrumentation in the gate run: average 0.0754 ms, p95 0.1103 ms, max 2.2639 ms. Under coverage instrumentation: average 0.2319 ms, p95 0.3354 ms, max 10.2845 ms. The assertion requires average < 2 ms.
+- 2026-11-17: largest source file is `GameState.ts` at exactly 250 lines (budget 250), then `useGameRuntime.ts` 246, `tracer.ts` 243, `GameInteraction.ts` 232, `levelValidatorFields.ts` 230; largest React shell is `GameCanvas.tsx` at 133 lines containing two components of ~40 and ~82 lines (budget 120 per component).
+- 2026-11-17: TC-F08–F13, TC-F15/F16 and TC-E08 are covered by `rules.test.ts`, `scoring.test.ts`, `hints.test.ts`, `levelValidator.test.ts` and `solutions.test.ts`. No browser interaction, FPS, frame-time or bundle-size figures were measured in this step.
+
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
 | ID | Status | ID | Status |
@@ -164,13 +183,13 @@ STEP 9 — Remaining mechanics — PARTIAL (2026-11-17). Implementation, full ga
 | AC-14 | ☐ | AC-28 | ☐ |
 
 AC-01: local build and `next start` verified in Step 1; Vercel deployment remains unverified.
-AC-22: Step 2 enforces ≥90% coverage on `src/lib/math`; optics, scoring and validator coverage are not yet available.
+AC-22: Step 2 enforces ≥90% coverage on `src/lib/math`; Step 10 coverage also reports optics 93.66% and scoring 100% statements, with validator 98.66% statements (branch coverage of the large field-validator helper remains 61.64%, below the Step 14 ≥90% branch goal).
 FR-053–057: settings schema, validation, debounced/blocked-storage persistence, migrations and effective settings implemented and unit-tested in Step 3; TC-E10 and TC-F09 logic covered.
-NFR-016: token text/background contrast pairs measured in Step 4 and all exceed 4.5:1; shape cues are a Step 10/14 concern.
+NFR-016: token text/background contrast pairs measured in Step 4 and all exceed 4.5:1; coloured-target shape cues (▲/●/■) are deferred to Step 14 accessibility work.
 AC-15 / AC-21: focus ring is defined globally (`:focus-visible` cyan outline) and every interactive primitive exposes native keyboard semantics in SSR tests; actual browser Tab/Escape traversal not verified (no browser automation available).
 AC-02: Step 5 adds all menu routes, Back buttons, schema-driven settings, lock-toast redirects and error boundaries; SSR markup tests and production HTTP 200 checks pass, but live mouse/keyboard navigation, reload persistence and confirmation-dialog interaction remain not verified in a browser.
 FR-001–010: implemented across Step 5 screens and gating; real-browser acceptance is still pending, so the step status is PARTIAL rather than PASS.
 FR-061 / TC-G12: responsive 16:9 view transform, DPR cap and pointer inversion implemented and unit-tested in Step 6; zoom/letterbox rendering and idle 60 FPS still need a real browser.
 FR-062 / FR-063: quality and reduced-motion values are threaded into the canvas hook, but live switching and visible motion reduction are Steps 11–12 work; the STEP 6 preview only pauses its pulse clock when reduced motion is active.
 TC-F03 / AC-06: 20 reflection pairs pass the independent 2θ−φ oracle in Step 7; the 4-bounce chain coordinates assertion is a test-scene check, not a Level 2 reference (levels arrive in STEP 10).
-AC-14: TC-X01–X08 now all pass (X05/X06 were added in Step 9). AC-22 still has ≥90% optics coverage after prism/gate additions; scoring and validator coverage come in STEP 10.
+AC-14: TC-X01–X08 now all pass (X05/X06 were added in Step 9). AC-22 still has ≥90% optics coverage after prism/gate additions; scoring and validator statement coverage were measured in STEP 10, with branch coverage still to be raised in STEP 14.
