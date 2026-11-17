@@ -2,14 +2,14 @@
 
 ## Current step
 
-STEP 1 — Scaffold and tooling — PASS (2026-11-17). Waiting for "next" before STEP 2.
+STEP 2 — Math foundation — PASS (2026-11-17). Waiting for "next" before STEP 3.
 
 ## Step log (date · step · status · commit)
 
 | Date | Step | Status | Commit |
 | --- | --- | --- | --- |
 | 2026-11-17 | 1 — Scaffold and tooling | PASS | 928f6e1 (scaffold, external) |
-| — | 2 — Math foundation | NOT STARTED | — |
+| 2026-11-17 | 2 — Math foundation | PASS | 6e58f38 (feature) |
 | — | 3 — Config, stores and settings core | NOT STARTED | — |
 | — | 4 — UI primitives | NOT STARTED | — |
 | — | 5 — Screens and navigation | NOT STARTED | — |
@@ -33,6 +33,9 @@ STEP 1 — Scaffold and tooling — PASS (2026-11-17). Waiting for "next" before
 - Node v22.22.3 / npm 11.15.0 are the local toolchain used for the gate; no hardware-dependent performance claims are made in this step.
 - Vitest 5 was rejected because it requires `@types/node@22+` while this repo uses `@types/node@20`; pinned Vitest 3.2.7 with matching `@vitest/coverage-v8`.
 - The local shell is Windows PowerShell 5.1, which cannot parse `&&`; the gate was run as four sequential npm scripts with failure short-circuit. CI uses `ubuntu-latest` (bash), where `&&`-style chaining would work.
+- Table 3.4 constants live in `src/lib/math/constants.ts` as Step 2 requires; `src/config/gameConfig.ts` in Step 3 will import/re-export them rather than duplicate literals.
+- `mat3.invert` returns `null` for singular matrices and non-finite determinants; callers must handle the null explicitly. `vec2.normalize` maps the zero vector to (0, 0) to avoid NaN.
+- Added an extra `src/lib/math/angles.ts` for degree/radian conversion and mirror-angle wrapping; it is needed by the optics core and keeps conversions out of the vector and matrix modules.
 
 ## PRD deviations (with justification)
 
@@ -47,6 +50,8 @@ STEP 1 — Scaffold and tooling — PASS (2026-11-17). Waiting for "next" before
 - 2026-11-17, Node v22.22.3 / npm 11.15.0: `npm run lint`, `npm run typecheck`, `npm run test` (2 passed, 1 file), `npm run build` all pass sequentially.
 - 2026-11-17, production server on `http://localhost:3100/`: HTTP 200, HTML contains the LightPath placeholder, `Content-Security-Policy-Report-Only` and `X-Content-Type-Options: nosniff` headers present.
 - No FPS, frame-time or bundle-size figures were measured in this step.
+- 2026-11-17, Node v22.22.3: `npm run test` → 20 tests passed (18 new), 5 files; `npm run lint`, `npm run typecheck`, `npm run build` pass.
+- 2026-11-17, `npm run test:coverage`: `src/lib/math` = 100% statements / branches / functions / lines (all five math files); a per-glob 90% threshold is now enforced in `vitest.config.ts`.
 
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
@@ -68,3 +73,4 @@ STEP 1 — Scaffold and tooling — PASS (2026-11-17). Waiting for "next" before
 | AC-14 | ☐ | AC-28 | ☐ |
 
 AC-01: local build and `next start` verified in Step 1; Vercel deployment remains unverified.
+AC-22: Step 2 enforces ≥90% coverage on `src/lib/math`; optics, scoring and validator coverage are not yet available.
