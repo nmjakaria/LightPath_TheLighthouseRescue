@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 14 — Accessibility, performance, hardening — PARTIAL (2026-11-18). Implementation and full gate pass (325 tests); coverage thresholds and the production dependency audit are clean. Real-browser keyboard/mouse/visual/FPS/audio/throttle checks, cross-browser smoke, Vercel/static-export/demo rehearsals remain unverified. Waiting for "next" before STEP 15.
+STEP 15 — Documentation, deployment, demo readiness — PARTIAL (2026-11-18). Submission docs, static export and final report are complete; the full gate passes (326 tests) and the offline export serves all checked routes. Vercel, browser-only, playtest, backup-video and timed-rehearsal checks remain unverified. This is the final planned step.
 
 ## Step log (date · step · status · commit)
 
@@ -22,7 +22,7 @@ STEP 14 — Accessibility, performance, hardening — PARTIAL (2026-11-18). Impl
 | 2026-11-18 | 12 — Audio | PARTIAL | 7db66fe (feature) |
 | 2026-11-18 | 13 — Optics Inspector | PARTIAL | 414f72a (feature) |
 | 2026-11-18 | 14 — Accessibility, performance, hardening | PARTIAL | 0aafef1 (feature) |
-| — | 15 — Documentation, deployment, demo readiness | NOT STARTED | — |
+| 2026-11-18 | 15 — Documentation, deployment, demo readiness | PARTIAL | 912d36b (feature/docs) |
 
 ## Decisions and assumptions
 
@@ -118,6 +118,15 @@ STEP 14 — Accessibility, performance, hardening — PARTIAL (2026-11-18). Impl
 - Coverage thresholds now enforce ≥90% lines/statements/branches/functions for geometry, scoring and each validator file in addition to math/optics; final aggregate coverage is 95.82% statements / 93.59% branches.
 - Prettier is configured but is not part of the required gate. A few files intentionally keep long lines to stay under the 250-line source budget, so `prettier --check` is not clean on those files; lint/typecheck/test/build are the enforced gate.
 - Real-browser keyboard-only playthrough, focus order, portrait notice, visible shape cues, reduced motion, FPS/frame-time, CPU-throttled timing, audio and cross-browser smoke were not verified without browser automation; pure logic, SSR markup and canvas-stub tests cover the implemented behaviour only.
+- STEP 15 static export uses `LIGHTPATH_STATIC_EXPORT=1` and emits to `.next-static`, not `out`, so it never clobbers the user-owned dev server's `.next`. `npm run build:static` wraps `next build` with the flag because Next 16 has no `--config` flag.
+- `dynamicParams = false` was removed from the play route because `next build` rejects it when `cacheComponents` is enabled; `generateStaticParams()` alone prerenders all five level routes in both builds.
+- ESLint ignores `.next-static/**`; otherwise it linted thousands of generated static-export chunks and reported errors from minified build output.
+- CSP remains `Content-Security-Policy-Report-Only`. An enforced policy would be a guess without a browser to verify Next inline scripts; `docs/final-report.md` records the exact report-only policy context and the residual risk.
+- `colorblindAid` was a schema-only setting until STEP 15; it now flows through effective settings into `VisualSettings`, `ComponentsLayer` and `drawTargetShape(..., enabled)`, with a new renderer test. Shape cues are opt-in and off by default.
+- `docs/final-report.md` follows PRD §28.1 but does not invent textbook, web or playtest evidence. References list only the internal PRD, AGENTS and repository evidence; the team must add verified course/API citations before submission if required.
+- Optional JSON export/import for settings was not implemented (the PRD marks it optional); reset settings and reset progress are implemented behind confirmation dialogs and documented in `docs/SETTINGS.md`.
+- Static export HTTP verification was repeated after the final static rebuild: eight routes returned 200 and the rendered HTML contained the expected menu/play text. This proves static serving, not browser interaction.
+- Vercel deployment, backup video, three timed rehearsals and a five-person playtest were not performed; the demo script's rehearsal log is deliberately blank. These are reported as not verified in the final report and AC table.
 
 ## PRD deviations (with justification)
 
@@ -230,6 +239,17 @@ STEP 14 — Accessibility, performance, hardening — PARTIAL (2026-11-18). Impl
 - 2026-11-18: all `src` files are ≤250 lines; largest source files are `useGameRuntime.ts` 246, `GameInteraction.ts` 247 and `ComponentsLayer.ts` 182. Largest React component is `PlayableGame` at ~111 lines, with `FpsBadge` extracted to keep it under 120.
 - No browser keyboard/focus/visual/FPS/frame-time/CPU-throttle/audio checks, cross-browser smoke, Vercel deployment, static export or timed demo rehearsal were performed; no browser automation was available.
 
+## Step 15 measurements
+
+- 2026-11-18, HP EliteBook 840 G6 / Windows NT 10.0.26300.0 / Node v22.22.3 / npm 11.15.0: final gate passes sequentially — lint ✔ (0 errors), typecheck ✔, 326 tests in 58 files ✔ (1 new target-shape test), `next build` ✔. No browser or browser version was used.
+- 2026-11-18, `npm run test:coverage`: all files 95.82% statements / 93.59% branches / 97.97% functions / 95.82% lines; enforced per-glob thresholds (math, optics, geometry, scoring, validator) pass. Coverage thresholds were unchanged by the renderer-only `colorblindAid` wiring.
+- 2026-11-18, `npm run build:static`: compiled successfully and prerendered `/`, `/about`, `/dev/ui`, `/how-to-play`, `/levels`, `/settings`, `/_not-found`, `404` and all five `/play/level-0N` routes. Default `npm run build` still succeeds with cache components and the partial `/play/[levelId]` route.
+- 2026-11-18, `npm run serve:static` smoke against the final `.next-static`: `/` 200/11,891 bytes, `/levels/` 200/30,275, `/how-to-play/` 200/47,089, `/settings/` 200/30,357, `/about/` 200/20,697, `/play/level-01/` 200/10,609, `/play/level-05/` 200/10,609, `/play/level-01` 200/10,609; home title and play gate text were present in HTML.
+- 2026-11-18, `.next/static/chunks`: 16 JS files, 744,518 raw bytes, 231,522 gzip bytes (226.1 KiB). This is a conservative all-chunks upper bound, not a measured `/play` first-load payload.
+- 2026-11-18, `npm audit --omit=dev --json`: 0 production vulnerabilities. Full `npm audit --json`: 22 dev-only advisories (5 moderate, 15 high, 2 critical); the command exits non-zero because of those dev advisories.
+- 2026-11-18: created `README.md`, `docs/level-authoring.md`, `docs/demo-script.md`, `docs/final-report.md` and finalised `docs/SETTINGS.md`. All `src` files remain ≤250 lines after the `colorblindAid` wiring.
+- 2026-11-18: Vercel, browser console, visual/FPS/audio/CPU-throttle, cross-browser, 30-minute heap, backup video, five-person playtest and three timed rehearsals were not performed; no fabricated values were recorded.
+
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
 | ID | Status | ID | Status |
@@ -244,18 +264,21 @@ STEP 14 — Accessibility, performance, hardening — PARTIAL (2026-11-18). Impl
 | AC-08 | ✔ | AC-22 | ✘ |
 | AC-09 | ✔ | AC-23 | ✘ |
 | AC-10 | ✔ | AC-24 | ✔ |
-| AC-11 | ✔ | AC-25 | ✘ |
+| AC-11 | ✔ | AC-25 | ✔ |
 | AC-12 | ✔ | AC-26 | ✘ |
 | AC-13 | ✔ | AC-27 | ✘ |
 | AC-14 | ✔ | AC-28 | ✘ |
 
-AC-01: local `build` and `next start` HTTP checks pass; Vercel production URL and browser console errors remain unverified.
-AC-02 / AC-03 / AC-05 / AC-20 / AC-21: navigation, five-level replay, snapping, keyboard selection/nudge, contrast and shape cues are covered by unit/SSR tests, but live mouse/keyboard play, cross-browser smoke, visible reduced motion and ≤1 s level-load timings were not measured (no browser automation).
+AC-01: local `build` and static-export HTTP checks pass; Vercel production URL, `next start` in this final step and browser console errors remain unverified.
+AC-02 / AC-03 / AC-05 / AC-20 / AC-21: navigation, five-level replay, snapping, keyboard selection/nudge, contrast and setting-gated shape cues are covered by unit/SSR tests, but live mouse/keyboard play, cross-browser smoke, visible reduced motion and ≤1 s level-load timings were not measured (no browser automation).
 AC-04 / AC-06–AC-14 / AC-19: verified by deterministic test oracles — 5/5 solution replay, 20 reflection pairs, obstacle/gate/prism/target/switch rules, scoring/completion, persistence/unlock, undo/reset/hints/pause, TC-X limits, and TC-E08/E10 hardening including the newly fixed validator crash.
-AC-15 / AC-16 / AC-17 / AC-18 / AC-28: solver mean 0.0776 ms over 500 local Node runs, particle caps and Inspector=solver equality are unit-tested, and the all-chunks bundle upper bound is 231,399 gzip bytes; reference-laptop FPS, 30-minute heap growth, visible atmosphere, ≤30 s rehearsal and real `/play` load timing are not verified.
-AC-22: local lint/typecheck have zero errors and Step 14 coverage thresholds pass (all files 95.82% statements / 93.59% branches; geometry 100/100; optics 93.66/91.33; scoring 100/90; validator 100/100). CI green on `main` after these commits remains unverified.
+AC-15 / AC-16 / AC-17 / AC-18 / AC-28: solver mean 0.0776 ms over 500 local Node runs in Step 14 (not re-measured after renderer-only changes), particle caps and Inspector=solver equality are unit-tested, and the all-chunks bundle upper bound is 231,522 gzip bytes; reference-laptop FPS, 30-minute heap growth, visible atmosphere, ≤30 s rehearsal and real `/play` first-load timing are not verified.
+AC-22: local lint/typecheck have zero errors and final coverage thresholds pass (all files 95.82% statements / 93.59% branches / 97.97% functions / 95.82% lines). CI green on `main` after these commits remains unverified because this work is still on `step/15-docs-deploy`.
 AC-23: production dependency audit is clean (0), CSP is report-only, and code search finds no `dangerouslySetInnerHTML` in `src`; full `npm audit` still reports 22 dev-only advisories (15 high, 2 critical), so the AC is not fully met.
 AC-24: known-issues list has no open Severity 1/2 bugs; dev-only audit and Prettier drift are Severity 3.
-AC-25–AC-27: README/level-authoring/demo script, static export/offline backup video/rehearsals and a documented 5-person playtest are STEP 15 work and not yet complete.
-FR-053–057: settings schema, validation, debounced/blocked-storage persistence, migrations and effective settings remain covered by Step 3 tests; TC-E10 and TC-F09 logic is unchanged.
+AC-25: README, level-authoring guide, finalised settings docs, demo script and `docs/final-report.md` are complete and honest; verified external citations must still be supplied by the team.
+AC-26: not performed; the final report explicitly records that no five-person playtest numbers exist rather than inventing results.
+AC-27: static export served eight routes with HTTP 200 in the final check; backup video and three timed rehearsals were not performed, so the full AC is not verified.
+AC-28: the conservative all-chunks gzip upper bound (231,522 bytes) is under 300 KB; real `/play` first-load network size and browser load timings were not measured.
+FR-053–057: settings schema, validation, debounced/blocked-storage persistence, migrations, effective settings and the newly wired `colorblindAid` consumer remain covered by tests; TC-E10 and TC-F09 logic is unchanged.
 FR-058–064 / FR-001–010 / FR-018–052: implemented across earlier steps; browser-only acceptance items stay unverified as noted above rather than being silently marked complete.
