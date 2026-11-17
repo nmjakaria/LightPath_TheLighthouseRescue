@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 3 — Config, stores and settings core — PASS (2026-11-17). Waiting for "next" before STEP 4.
+STEP 4 — UI primitives — PASS (2026-11-17). Waiting for "next" before STEP 5.
 
 ## Step log (date · step · status · commit)
 
@@ -11,6 +11,7 @@ STEP 3 — Config, stores and settings core — PASS (2026-11-17). Waiting for "
 | 2026-11-17 | 1 — Scaffold and tooling | PASS | 928f6e1 (scaffold, external) |
 | 2026-11-17 | 2 — Math foundation | PASS | 6e58f38 (feature) |
 | 2026-11-17 | 3 — Config, stores and settings core | PASS | 7337454 (feature) |
+| 2026-11-17 | 4 — UI primitives | PASS | e7c5154 (feature) |
 | — | 4 — UI primitives | NOT STARTED | — |
 | — | 5 — Screens and navigation | NOT STARTED | — |
 | — | 6 — Canvas foundation | NOT STARTED | — |
@@ -40,6 +41,10 @@ STEP 3 — Config, stores and settings core — PASS (2026-11-17). Waiting for "
 - Assumed v0 settings used `volume` (0..100), `step`, `muted`, `reducedMotion`; assumed v0 progress stored `bestScore`/`bestTimeSec`/`bestMoves` directly on each level. Both shapes are documented in `docs/SETTINGS.md` and covered by migration tests.
 - `LevelRecord.best` is `ScoreRecord | null` (and best time/moves are `number | null`) because an uncompleted level has no best result; this is a minimal extension of the PRD §19 sketch.
 - Effective-environment detection uses the `useSyncExternalStore` server/client snapshot split instead of `setState` in an effect: SSR/hydration see safe defaults, then the client snapshot applies on first client render and satisfies the React lint rules.
+- UI icons are small inline SVGs; the optional `lucide-react` dependency is not installed. All icons carry `aria-hidden` and their controls carry text or `aria-label`.
+- `/dev/ui` is "excluded from production" by rendering an inert fallback when `NODE_ENV === "production"` (or the flag is off); the route is still prerendered but exposes no showcase content.
+- Toast duration/cap, ring geometry and star count live in `src/config/uiConfig.ts`; Tailwind utilities reference only the CSS-variable palette in `tokens.css`.
+- A pre-existing user-owned `next dev` server on port 3000 shares `.next`, so a second dev server could not be started for browser verification. The showcase and primitive markup are instead verified with `react-dom/server` tests; real browser tab traversal and focus movement remain unverified.
 
 ## PRD deviations (with justification)
 
@@ -61,6 +66,12 @@ STEP 3 — Config, stores and settings core — PASS (2026-11-17). Waiting for "
 
 - 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 46 tests in 8 files ✔, `next build` ✔ (2 static routes).
 - 2026-11-17, `npm run test:coverage`: all files 97.35% statements / 93.33% branches / 97.77% functions / 97.35% lines; `src/lib/math` 100%, `src/lib/settings` 100% statements, `src/lib/store` 92.45% statements. No FPS, frame-time or bundle figures measured.
+
+## Step 4 measurements
+
+- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 94 tests in 13 files ✔, `next build` ✔ (3 static routes including the inert production `/dev/ui`).
+- 2026-11-17, contrast ratios computed from `src/styles/tokens.css` by unit test: Soft White/Midnight 16.76:1, Abyss/Cyan Beam 11.07:1, Mist/Midnight 8.46:1, Soft White/Deep Navy 14.42:1, Mist/Deep Navy 7.28:1, Abyss/Danger 7.24:1, Abyss/Star Gold 13.88:1 — all ≥4.5:1.
+- 2026-11-17: largest UI source file is `Toast.tsx` at 139 lines (budget 250); largest React component is `UiShowcase` at 101 lines (budget 120).
 
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
@@ -84,3 +95,5 @@ STEP 3 — Config, stores and settings core — PASS (2026-11-17). Waiting for "
 AC-01: local build and `next start` verified in Step 1; Vercel deployment remains unverified.
 AC-22: Step 2 enforces ≥90% coverage on `src/lib/math`; optics, scoring and validator coverage are not yet available.
 FR-053–057: settings schema, validation, debounced/blocked-storage persistence, migrations and effective settings implemented and unit-tested in Step 3; TC-E10 and TC-F09 logic covered.
+NFR-016: token text/background contrast pairs measured in Step 4 and all exceed 4.5:1; shape cues are a Step 10/14 concern.
+AC-15 / AC-21: focus ring is defined globally (`:focus-visible` cyan outline) and every interactive primitive exposes native keyboard semantics in SSR tests; actual browser Tab/Escape traversal not verified (no browser automation available).
