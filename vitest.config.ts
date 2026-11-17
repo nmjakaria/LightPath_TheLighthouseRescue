@@ -10,11 +10,40 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
       include: ["src/lib/**/*.ts", "src/engine/optics/**/*.ts", "src/game/**/*.ts"],
+      thresholds: {
+        "src/lib/math/**/*.ts": {
+          lines: 90,
+          statements: 90,
+          branches: 90,
+          functions: 90,
+        },
+        "src/engine/optics/**/*.ts": {
+          lines: 90,
+          statements: 90,
+          branches: 90,
+          functions: 90,
+        },
+        "src/game/geometry.ts": { lines: 90, statements: 90, branches: 90, functions: 90 },
+        "src/game/scoring.ts": { lines: 90, statements: 90, branches: 90, functions: 90 },
+        "src/game/levelValidator.ts": { lines: 90, statements: 90, branches: 90, functions: 90 },
+        "src/game/levelValidatorFields.ts": {
+          lines: 90,
+          statements: 90,
+          branches: 90,
+          functions: 90,
+        },
+        "src/game/levelValidatorSpacing.ts": {
+          lines: 90,
+          statements: 90,
+          branches: 90,
+          functions: 90,
+        },
+      },
     },
   },
 });

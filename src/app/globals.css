@@ -46,11 +46,109 @@
   }
 }
 
+/* Screen transitions and decorative motion. Durations for interactive effects are supplied from
+ * uiConfig.ts; the lighthouse sweep is purely decorative and honours reduced-motion below. */
+@keyframes route-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lock-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+@keyframes lighthouse-sweep {
+  from {
+    transform: rotate(-22deg);
+  }
+  to {
+    transform: rotate(22deg);
+  }
+}
+
+.route-fade {
+  animation-name: route-fade;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.route-fade--instant,
+.lock-shake--instant {
+  animation: none;
+}
+
+.lock-shake {
+  animation-name: lock-shake;
+  animation-timing-function: ease-in-out;
+}
+
+.night-glow {
+  background:
+    radial-gradient(
+      circle at 18% 18%,
+      color-mix(in srgb, var(--cyan-beam) 14%, transparent),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 82% 28%,
+      color-mix(in srgb, var(--navy-line) 45%, transparent),
+      transparent 32%
+    );
+}
+
+.night-sweep {
+  background: conic-gradient(
+    from 180deg at 50% 100%,
+    transparent,
+    var(--cyan-beam),
+    transparent 42%
+  );
+  opacity: 0.08;
+  transform-origin: 50% 100%;
+  animation: lighthouse-sweep 9s ease-in-out infinite alternate;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* NFR-007: portrait phones get an explicit rotate notice instead of a cramped playfield. */
+.orientation-notice {
+  display: none;
+}
+
+@media (orientation: portrait) and (max-width: 767px) {
+  .orientation-notice {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    background: var(--abyss);
+    text-align: center;
   }
 }
