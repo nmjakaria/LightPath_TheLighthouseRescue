@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 8 — Level 1 playable — PASS (2026-11-17). Full gate and all step-specific checks passed. Waiting for "next" before STEP 9.
+STEP 8 — Level 1 playable — PARTIAL (2026-11-17). Implementation, full gate and all logic checks passed; real-browser mouse/keyboard playthrough remains unverified. Waiting for "next" before STEP 9.
 
 ## Step log (date · step · status · commit)
 
@@ -15,7 +15,7 @@ STEP 8 — Level 1 playable — PASS (2026-11-17). Full gate and all step-specif
 | 2026-11-17 | 5 — Screens and navigation | PARTIAL | 3e41f30 (feature) |
 | 2026-11-17 | 6 — Canvas foundation | PARTIAL | 1ce8167 (feature) |
 | 2026-11-17 | 7 — Optics core | PASS | 8811c38 (feature) |
-| 2026-11-17 | 8 — Level 1 playable | PASS | e519bd4 (feature) |
+| 2026-11-17 | 8 — Level 1 playable | PARTIAL | e519bd4 (feature) |
 | — | 9 — Remaining mechanics | NOT STARTED | — |
 | — | 10 — Game rules, five levels, progression | NOT STARTED | — |
 | — | 11 — Visual polish | NOT STARTED | — |
