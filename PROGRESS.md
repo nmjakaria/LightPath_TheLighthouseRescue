@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 8 — Level 1 playable — PARTIAL (2026-11-17). Implementation, full gate and all logic checks passed; real-browser mouse/keyboard playthrough remains unverified. Waiting for "next" before STEP 9.
+STEP 9 — Remaining mechanics — PARTIAL (2026-11-17). Implementation, full gate and all logic checks passed; real-browser mouse/keyboard playthrough remains unverified. Waiting for "next" before STEP 10.
 
 ## Step log (date · step · status · commit)
 
@@ -16,7 +16,7 @@ STEP 8 — Level 1 playable — PARTIAL (2026-11-17). Implementation, full gate 
 | 2026-11-17 | 6 — Canvas foundation | PARTIAL | 1ce8167 (feature) |
 | 2026-11-17 | 7 — Optics core | PASS | 8811c38 (feature) |
 | 2026-11-17 | 8 — Level 1 playable | PARTIAL | e519bd4 (feature) |
-| — | 9 — Remaining mechanics | NOT STARTED | — |
+| 2026-11-17 | 9 — Remaining mechanics | PARTIAL | 9e70f23 (feature) |
 | — | 10 — Game rules, five levels, progression | NOT STARTED | — |
 | — | 11 — Visual polish | NOT STARTED | — |
 | — | 12 — Audio | NOT STARTED | — |
@@ -70,6 +70,13 @@ STEP 8 — Level 1 playable — PARTIAL (2026-11-17). Implementation, full gate 
 - `useGameRuntime` tracks a pending drag id separately from `GameState.dragId` so a pointer-down/up pair that happens between frames is still committed exactly once.
 - Beam pass widths/alphas, component line widths, lamp radii and label size moved into `gameConfig.render`; light-channel colours come from CSS-variable tokens resolved once by `readPalette()`.
 - Real-browser drag/rotate interaction, focus traversal and FPS were still not measured; automated tests cover command flow, snapping, undo/reset, 2× reflection, idle solves and completion, and `/play/level-01` was checked over HTTP only.
+- Step 9 implements the prism exactly as PRD §12.9's **simplified rule model**: mixed light splits into R/G/B children at `φ−Δ, φ, φ+Δ`; single-channel light passes straight with transmittance loss. This is not Snell's law and must stay labelled as simplified in user-facing copy.
+- `GameInteraction.ts` owns mutable interaction/undo/drag state; `GameState.ts` owns systems, the dirty-flag solve, gate animation, target charge and completion. This split keeps both files under the 250-line budget while preserving the exact undo semantics from Step 8.
+- A gate's solver geometry changes only when `openFraction` crosses `gameConfig.optics.gateOpenFraction` (0.5); the bar itself animates linearly over `GATE_SLIDE_SEC` (0.5 s). A 10 Hz switch toggle therefore does not thrash the solver.
+- Locked mirrors and lamps are still picked by the pointer so the engine can emit `"locked"` feedback instead of silently ignoring the input. Movable obstacles use `"outsideRange"` feedback when a drag leaves the rail.
+- `rayVsPolygonHits()` collapses duplicate edge hits within `EPS_U`, so an exact polygon-corner hit becomes one surface hit and does not leak a second segment. A prism ray that only touches a vertex without a distinct exit produces no fan.
+- The prism unit test uses `orientationDeg: 30` so the ray enters and exits through two distinct faces; a right-facing triangle at `0°` grazes a vertex and is not a valid dispersion scene.
+- Real-browser dragging of movable obstacles, lamps and switch/gate feedback was not measured; TC-F06/F07/F14, TC-G05–G07, TC-E04/E06 and TC-X05/X06 are covered by deterministic unit scenes only.
 
 ## PRD deviations (with justification)
 
@@ -128,6 +135,15 @@ STEP 8 — Level 1 playable — PARTIAL (2026-11-17). Implementation, full gate 
 - TC-F01/F02/F08/F15 logic is covered by 12 `GameState` tests; the reflection oracle asserts a 90° heading change for a 45° mirror rotation (2× rule); the idle-frame test asserts `solveCount` stays at 1 across two unchanged ticks.
 - Level 1 solution replay (`M1=135°`, `M2=135°`) completes after charge + hold; the initial state does not complete after 2 s of idle ticks.
 
+## Step 9 measurements
+
+- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 216 tests in 37 files ✔ (18 new), `next build` ✔ (7 static routes plus `/play/[levelId]` partial prerender).
+- 2026-11-17, `npm run test:coverage`: all files 95.82% statements / 91.42% branches / 99% functions / 95.82% lines; `src/engine/optics` 93.66% statements / 91.21% branches / 100% functions / 93.66% lines; `src/game` 97.67% statements / 87.96% branches / 100% functions / 97.67% lines. The 90% per-glob threshold still passes.
+- 2026-11-17, 500 four-mirror solves without coverage instrumentation: average 0.0790 ms, p95 0.1550 ms, max 1.4723 ms.
+- 2026-11-17, user-owned dev server on `http://localhost:3000/play/level-01`: HTTP 200 (16,697 bytes SSR markup). No browser interaction or FPS measurement.
+- 2026-11-17: largest Step 9 source file is `useGameRuntime.ts` at 244 lines, then `tracer.ts` 243, `GameInteraction.ts` 232, `GameState.ts` 210, `ComponentsLayer.ts` 126, `componentShapes.ts` 115 and `GameCanvas.tsx` 103; all under the AGENTS budgets (250/250/120).
+- TC-F04/F05/G07/X05 are covered by `prism.test.ts`; TC-F06/F14/X06 by `mechanics.test.ts` + `gates.test.ts`; TC-F07/G05/E04 by `mechanics.test.ts` (optics); TC-G06 by `tracerLimits.test.ts`; TC-E06 by `tracer.test.ts`; movable-obstacle, rotatable-lamp and locked-feedback scenes live in `interaction.test.ts`.
+
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
 | ID | Status | ID | Status |
@@ -157,4 +173,4 @@ FR-001–010: implemented across Step 5 screens and gating; real-browser accepta
 FR-061 / TC-G12: responsive 16:9 view transform, DPR cap and pointer inversion implemented and unit-tested in Step 6; zoom/letterbox rendering and idle 60 FPS still need a real browser.
 FR-062 / FR-063: quality and reduced-motion values are threaded into the canvas hook, but live switching and visible motion reduction are Steps 11–12 work; the STEP 6 preview only pauses its pulse clock when reduced motion is active.
 TC-F03 / AC-06: 20 reflection pairs pass the independent 2θ−φ oracle in Step 7; the 4-bounce chain coordinates assertion is a test-scene check, not a Level 2 reference (levels arrive in STEP 10).
-AC-14: TC-X01–X04, X07, X08 pass in Step 7; X05/X06 (prism branching and gate flicker) are STEP 9 work. AC-22 now has 90% optics coverage in addition to the math threshold; scoring and validator coverage come later.
+AC-14: TC-X01–X08 now all pass (X05/X06 were added in Step 9). AC-22 still has ≥90% optics coverage after prism/gate additions; scoring and validator coverage come in STEP 10.
