@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { RouteFade } from "@/components/game/RouteFade";
+import { ToastProvider } from "@/components/ui";
 import "./globals.css";
 
 const headingFont = Space_Grotesk({
@@ -32,7 +34,13 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       lang="en"
       className={`${headingFont.variable} ${bodyFont.variable} ${monoFont.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-abyss text-soft-white font-sans">{children}</body>
+      <body className="min-h-full bg-abyss text-soft-white font-sans">
+        <ToastProvider>
+          <Suspense fallback={<div className="min-h-screen bg-abyss">{children}</div>}>
+            <RouteFade>{children}</RouteFade>
+          </Suspense>
+        </ToastProvider>
+      </body>
     </html>
   );
 }

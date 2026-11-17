@@ -5,6 +5,8 @@ export const uiConfig = {
     durationMs: 6000,
     maxVisible: 3,
   },
+  routeFadeMs: 250,
+  lockShakeMs: 400,
   progressRing: {
     size: 72,
     strokeWidth: 6,
