@@ -1,0 +1,133 @@
+/*
+ * Build-time tunables for the whole game. Values that are also numeric/tolerance constants
+ * are imported from lib/math/constants so there is only one literal definition in the repo.
+ */
+import {
+  BOUNDARY,
+  COMPLETION_HOLD_SEC,
+  DT_CLAMP,
+  EPS_PARALLEL,
+  EPS_U,
+  FINE_STEP,
+  GATE_SLIDE_SEC,
+  MAX_BOUNCES,
+  MAX_SEGMENTS,
+  MIN_INTENSITY,
+  MIXED_THRESHOLD,
+  MIRROR_LENGTH,
+  MIRROR_REFLECTANCE,
+  OFFSET,
+  PRISM_TRANSMITTANCE,
+  ROTATION_STEP,
+  SWITCH_RADIUS,
+  T_MIN,
+  TARGET_ACTIVATION_SEC,
+  TARGET_MIN_INTENSITY,
+  TARGET_RADIUS,
+  UNDO_LIMIT,
+  WORLD,
+} from "@/lib/math/constants";
+
+export type QualityPreset = "low" | "medium" | "high";
+
+export interface QualityPresetValues {
+  particleCap: number;
+  moteCap: number;
+  glowPasses: number;
+  waterLayers: number;
+}
+
+export interface GameConfig {
+  world: { width: number; height: number };
+  boundary: { x0: number; y0: number; x1: number; y1: number };
+  tolerances: { epsParallel: number; epsU: number; tMin: number; offset: number };
+  optics: {
+    maxBounces: number;
+    maxSegments: number;
+    minIntensity: number;
+    mirrorReflectance: number;
+    prismTransmittance: number;
+    prismSpreadDeg: number;
+    mixedThreshold: number;
+  };
+  interaction: {
+    rotationStepDeg: number;
+    fineStepDeg: number;
+    undoLimit: number;
+    mirrorLength: number;
+    targetRadius: number;
+    switchRadius: number;
+  };
+  targets: {
+    activationSec: number;
+    decayFactor: number;
+    minIntensity: number;
+    completionHoldSec: number;
+  };
+  scoring: {
+    base: number;
+    timePenaltyPerSec: number;
+    movePenalty: number;
+    hintPenalty: number;
+    penaltyCap: number;
+    minScore: number;
+    stars: { three: number; two: number };
+  };
+  quality: Record<QualityPreset, QualityPresetValues>;
+  storage: { writeDebounceMs: number };
+  gateSlideSec: number;
+  dtClamp: number;
+}
+
+export const gameConfig: GameConfig = {
+  world: WORLD,
+  boundary: BOUNDARY,
+  tolerances: { epsParallel: EPS_PARALLEL, epsU: EPS_U, tMin: T_MIN, offset: OFFSET },
+  optics: {
+    maxBounces: MAX_BOUNCES,
+    maxSegments: MAX_SEGMENTS,
+    minIntensity: MIN_INTENSITY,
+    mirrorReflectance: MIRROR_REFLECTANCE,
+    prismTransmittance: PRISM_TRANSMITTANCE,
+    prismSpreadDeg: 12,
+    mixedThreshold: MIXED_THRESHOLD,
+  },
+  interaction: {
+    rotationStepDeg: ROTATION_STEP,
+    fineStepDeg: FINE_STEP,
+    undoLimit: UNDO_LIMIT,
+    mirrorLength: MIRROR_LENGTH,
+    targetRadius: TARGET_RADIUS,
+    switchRadius: SWITCH_RADIUS,
+  },
+  targets: {
+    activationSec: TARGET_ACTIVATION_SEC,
+    decayFactor: 1.5,
+    minIntensity: TARGET_MIN_INTENSITY,
+    completionHoldSec: COMPLETION_HOLD_SEC,
+  },
+  scoring: {
+    base: 1000,
+    timePenaltyPerSec: 2,
+    movePenalty: 15,
+    hintPenalty: 100,
+    penaltyCap: 300,
+    minScore: 100,
+    stars: { three: 800, two: 500 },
+  },
+  quality: {
+    low: { particleCap: 80, moteCap: 15, glowPasses: 1, waterLayers: 2 },
+    medium: { particleCap: 200, moteCap: 40, glowPasses: 2, waterLayers: 3 },
+    high: { particleCap: 400, moteCap: 80, glowPasses: 3, waterLayers: 4 },
+  },
+  storage: { writeDebounceMs: 150 },
+  gateSlideSec: GATE_SLIDE_SEC,
+  dtClamp: DT_CLAMP,
+};
+
+export const STORAGE_KEYS = {
+  settings: "lightpath.v1.settings",
+  progress: "lightpath.v1.progress",
+} as const;
+
+export const SCHEMA_VERSIONS = { settings: 1, progress: 1 } as const;
