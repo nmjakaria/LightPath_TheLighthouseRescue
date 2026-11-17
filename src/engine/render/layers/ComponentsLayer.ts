@@ -4,7 +4,8 @@ import { gameConfig } from "@/config/gameConfig";
 import type { GameState } from "@/engine/core/GameState";
 import { worldVertices } from "@/game/movableObstacles";
 import { getMirrorEndpoints } from "@/engine/optics/transform";
-import { BOUNDARY } from "@/lib/math/constants";
+import { headingToVec } from "@/lib/math/vec2";
+import { BOUNDARY, MIRROR_LENGTH } from "@/lib/math/constants";
 import type { LevelMirrorConfig, TargetRuntime } from "@/types/level";
 import type { Vec2 } from "@/types/vec2";
 import {
@@ -26,7 +27,7 @@ export class ComponentsLayer implements Layer {
     private readonly state: GameState,
   ) {}
 
-  draw({ ctx }: Parameters<Layer["draw"]>[0]): void {
+  draw({ ctx, stats }: Parameters<Layer["draw"]>[0]): void {
     const { labelFontSizePx } = gameConfig.render;
     ctx.save();
     ctx.font = `${labelFontSizePx}px ui-monospace, monospace`;
@@ -40,7 +41,60 @@ export class ComponentsLayer implements Layer {
       drawSource(ctx, source, this.palette, this.isHighlighted(source.id));
     }
     for (const mirror of this.state.mirrors) this.drawMirror(ctx, mirror);
+    this.drawHint(ctx, stats.elapsedSec);
     ctx.restore();
+  }
+
+  /** Tier 2 pulses the next component; tier 3 overlays its solved angle or slide position. */
+  private drawHint(ctx: CanvasRenderingContext2D, elapsedSec: number): void {
+    const hint = this.state.hint;
+    if (!hint?.componentId) return;
+    const { hints, render } = gameConfig;
+    const pulse = this.state.reducedMotion
+      ? 1
+      : 0.65 + 0.35 * Math.sin(elapsedSec * Math.PI * 2 * hints.pulseHz);
+    ctx.save();
+    ctx.strokeStyle = this.palette.starGold;
+    ctx.lineWidth = render.lineWidth.halo;
+    ctx.lineCap = "round";
+
+    const mirror = this.state.mirrors.find((item) => item.id === hint.componentId);
+    if (mirror) {
+      const ghost = hint.angleDeg === undefined ? mirror : { ...mirror, angleDeg: hint.angleDeg };
+      ctx.globalAlpha = hint.angleDeg === undefined ? hints.outlineAlpha * pulse : hints.ghostAlpha;
+      this.strokeSegment(ctx, getMirrorEndpoints(ghost));
+      ctx.restore();
+      return;
+    }
+
+    const source = this.state.sources.find((item) => item.id === hint.componentId);
+    if (source) {
+      const heading = hint.angleDeg ?? source.headingDeg;
+      const direction = headingToVec(heading);
+      ctx.globalAlpha = hint.angleDeg === undefined ? hints.outlineAlpha * pulse : hints.ghostAlpha;
+      const tip = {
+        x: source.position.x + direction.x * MIRROR_LENGTH,
+        y: source.position.y + direction.y * MIRROR_LENGTH,
+      };
+      this.strokeSegment(ctx, [source.position, tip]);
+      ctx.restore();
+      return;
+    }
+
+    const obstacle = this.state.movableObstacles.find((item) => item.id === hint.componentId);
+    if (obstacle && hint.position) {
+      ctx.globalAlpha = hints.ghostAlpha;
+      const ghost = { ...obstacle, position: hint.position };
+      drawObstacle(ctx, worldVertices(ghost), this.palette, true);
+    }
+    ctx.restore();
+  }
+
+  private strokeSegment(ctx: CanvasRenderingContext2D, endpoints: readonly Vec2[]): void {
+    ctx.beginPath();
+    ctx.moveTo(endpoints[0].x, endpoints[0].y);
+    ctx.lineTo(endpoints[1].x, endpoints[1].y);
+    ctx.stroke();
   }
 
   private isHighlighted(id: string): boolean {

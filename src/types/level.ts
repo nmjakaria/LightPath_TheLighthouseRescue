@@ -90,6 +90,8 @@ export interface LevelConfig {
   par: { timeSec: number; moves: number };
   rotationStepDeg?: number;
   darkness?: boolean;
+  /** Extra celebration time before the result screen; Level 5 uses the configured finale duration. */
+  celebrationSec?: number;
   sources: readonly LevelSourceConfig[];
   mirrors: readonly LevelMirrorConfig[];
   prisms: readonly LevelPrismConfig[];

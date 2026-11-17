@@ -4,12 +4,15 @@
  * receives only a low-rate HUD snapshot (PRD §12.8, FR-022–037).
  */
 import { gameConfig } from "@/config/gameConfig";
+import { createCompletion, requiredTargetsActive, type CompletionSummary } from "@/game/completion";
 import { approachOpenFraction, gateBlocks } from "@/game/gates";
 import { initialGeometry } from "@/game/geometry";
-import { worldVertices } from "@/game/movableObstacles";
+import { getHint, hintGeometryFrom, type HintDisplay } from "@/game/hints";
+import { buildOpticsScene } from "@/game/opticsScene";
 import { eventActivatesSwitch, eventChargesTarget, nextCharge } from "@/game/targets";
 import { solveOptics } from "@/engine/optics/tracer";
 import { GameInteraction } from "./GameInteraction";
+import { buildHudSnapshot, isPlayCommand, type HudSnapshot } from "./hud";
 import type { InputCommand, InteractionFeedback } from "@/types/input";
 import type {
   GateRuntime,
@@ -20,24 +23,10 @@ import type {
   SwitchRuntime,
   TargetRuntime,
 } from "@/types/level";
-import type { OpticsResult, OpticsScene } from "@/types/optics";
+import type { OpticsResult } from "@/types/optics";
 import type { Vec2 } from "@/types/vec2";
 
-export interface HudSnapshot {
-  levelId: string;
-  moves: number;
-  timeSec: number;
-  selectedId: string | null;
-  hoveredId: string | null;
-  status: "playing" | "complete";
-  litTargets: number;
-  requiredTargets: number;
-  litSwitches: number;
-  openGates: number;
-  feedback: InteractionFeedback | null;
-  canUndo: boolean;
-}
-
+export type { HudSnapshot };
 function emptyResult(): OpticsResult {
   return {
     segments: [],
@@ -60,8 +49,18 @@ export class GameState {
   solveCount = 0;
   result: OpticsResult = emptyResult();
   rotationStepDeg: number;
+  paused = false;
+  started = false;
+  reducedMotion = false;
+  hintsUsed = 0;
+  hint: HintDisplay | null = null;
+  completion: CompletionSummary | null = null;
+  celebrationSec = 0;
 
   private holdSec = 0;
+  private lastProgressMoves = 0;
+  private lastProgressLit = 0;
+  private lastProgressAtSec = 0;
 
   constructor(
     readonly level: LevelConfig,
@@ -92,55 +91,127 @@ export class GameState {
   get feedback(): InteractionFeedback | null { return this.interaction.feedback; }
   get dragId(): string | null { return this.interaction.dragId; }
   get obstacleDragId(): string | null { return this.interaction.obstacleDragId; }
-
+  get hintsRemaining(): number { return Math.max(0, gameConfig.hints.max - this.hintsUsed); }
+  get celebrationReady(): boolean { return this.celebrationSec >= (this.level.celebrationSec ?? 0); }
   kindOf(id: string | null): "mirror" | "source" | "obstacle" | null { return this.interaction.kindOf(id); }
   componentCenter(id: string | null): Vec2 | null { return this.interaction.componentCenter(id); }
 
   snapshot(): HudSnapshot {
-    return {
-      levelId: this.level.id,
+    return buildHudSnapshot({
+      level: this.level,
       moves: this.moves,
-      timeSec: this.elapsedSec,
+      elapsedSec: this.elapsedSec,
       selectedId: this.selectedId,
       hoveredId: this.hoveredId,
       status: this.status,
-      litTargets: this.targets.filter((target) => target.active).length,
-      requiredTargets: this.targets.filter((target) => target.required).length,
-      litSwitches: this.switches.filter((input) => input.active).length,
-      openGates: this.gates.filter((gate) => !gateBlocks(gate.openFraction)).length,
-      feedback: this.feedback,
+      paused: this.paused,
+      started: this.started,
+      targets: this.targets,
+      switches: this.switches,
+      gates: this.gates,
       canUndo: this.interaction.canUndo,
-    };
+      feedback: this.feedback,
+      hintsUsed: this.hintsUsed,
+      hintsRemaining: this.hintsRemaining,
+      hint: this.hint,
+      completion: this.completion,
+      celebrationReady: this.celebrationReady,
+      progressAtSec: this.lastProgressAtSec,
+      progressLit: this.lastProgressLit,
+      prismHit: this.result.events.some((event) => event.type === "prism"),
+    });
   }
 
   /** Completion freezes play input but still allows hover feedback. */
   apply(command: InputCommand): void {
-    if (this.status === "complete" && command.type !== "hover") return;
-    if (command.type === "reset") {
-      this.reset();
+    if (command.type === "hover") {
+      this.interaction.apply(command);
       return;
     }
+    if (command.type === "pause") {
+      this.paused = command.paused;
+      return;
+    }
+    if (command.type === "pauseToggle") {
+      this.paused = !this.paused;
+      return;
+    }
+    if (this.paused || this.status === "complete") return;
+    if (command.type === "reset") return this.reset();
+    if (command.type === "hint") return this.useHint();
+    if (isPlayCommand(command)) this.started = true;
     this.interaction.apply(command);
+  }
+
+  private useHint(): void {
+    if (this.hintsRemaining === 0) return;
+    this.started = true;
+    this.hintsUsed += 1;
+    this.hint = getHint(
+      this.level,
+      hintGeometryFrom(this.mirrors, this.sources, this.movableObstacles),
+      this.hintsUsed as 1 | 2 | 3,
+    );
   }
 
   /** Solves only when geometry changed, then advances switches, gates and target charge. */
   tick(dt: number): void {
-    if (this.status === "complete" || !Number.isFinite(dt) || dt < 0) return;
-    this.elapsedSec += dt;
+    if (this.paused || !Number.isFinite(dt) || dt < 0) return;
+    if (this.status === "complete") {
+      const target = this.level.celebrationSec ?? 0;
+      this.celebrationSec = Math.min(target, this.celebrationSec + dt);
+      return;
+    }
+    if (this.started) this.elapsedSec += dt;
     if (this.dirty) {
-      this.result = solveOptics(this.opticsScene());
+      this.result = solveOptics(buildOpticsScene({
+        level: this.level,
+        sources: this.sources,
+        mirrors: this.mirrors,
+        movableObstacles: this.movableObstacles,
+        switches: this.switches,
+        gates: this.gates,
+        targets: this.targets,
+      }));
       this.solveCount += 1;
       this.dirty = false;
     }
     this.updateSwitchesAndGates(dt);
     this.updateTargets(dt);
+    this.trackProgress();
+  }
+
+  private trackProgress(): void {
+    const lit = this.targets.filter((target) => target.active).length;
+    if (this.moves !== this.lastProgressMoves || lit > this.lastProgressLit) {
+      this.lastProgressMoves = this.moves;
+      this.lastProgressLit = lit;
+      this.lastProgressAtSec = this.elapsedSec;
+    }
+  }
+
+  private finalizeCompletion(): void {
+    this.status = "complete";
+    this.completion = createCompletion(this.level, {
+      parTimeSec: this.level.par.timeSec,
+      parMoves: this.level.par.moves,
+      timeSec: this.elapsedSec,
+      moves: this.moves,
+      hintsUsed: this.hintsUsed,
+    });
   }
 
   private reset(): void {
     this.interaction.reset(initialGeometry(this.level));
     this.elapsedSec = 0;
     this.holdSec = 0;
+    this.celebrationSec = 0;
+    this.completion = null;
     this.status = "playing";
+    this.started = false;
+    this.lastProgressMoves = 0;
+    this.lastProgressLit = 0;
+    this.lastProgressAtSec = 0;
     this.result = emptyResult();
     for (const input of this.switches) input.active = false;
     for (const gate of this.gates) gate.openFraction = 0;
@@ -148,34 +219,6 @@ export class GameState {
       target.chargeSec = 0;
       target.active = false;
     }
-  }
-
-  private opticsScene(): OpticsScene {
-    const obstacles = [
-      ...this.level.obstacles,
-      ...this.movableObstacles.map((obstacle) => ({ id: obstacle.id, vertices: worldVertices(obstacle) })),
-    ];
-    return {
-      sources: this.sources,
-      mirrors: this.mirrors,
-      obstacles,
-      gates: this.gates,
-      prisms: this.level.prisms,
-      circles: [
-        ...this.targets.map((target) => ({
-          id: target.id, type: "target" as const, center: target.center, radius: target.radius,
-        })),
-        ...this.switches.map((input) => ({
-          id: input.id, type: "switch" as const, center: input.center, radius: input.radius,
-        })),
-        ...this.sources.map((source) => ({
-          id: source.id,
-          type: "lamp" as const,
-          center: source.position,
-          radius: source.housingRadius ?? gameConfig.optics.lampHousingRadius,
-        })),
-      ],
-    };
   }
 
   private updateSwitchesAndGates(dt: number): void {
@@ -191,18 +234,15 @@ export class GameState {
   }
 
   private updateTargets(dt: number): void {
-    let allRequiredActive = true;
     for (const target of this.targets) {
       const hit = this.result.events.find((event) => event.objectId === target.id);
       const lit = hit !== undefined && eventChargesTarget(hit, target);
       target.chargeSec = nextCharge(target.chargeSec, dt, lit);
       target.active = target.chargeSec >= gameConfig.targets.activationSec;
-      if (target.required && !target.active) allRequiredActive = false;
     }
-    const requiredCount = this.targets.filter((target) => target.required).length;
-    if (requiredCount > 0 && allRequiredActive) {
+    if (requiredTargetsActive(this.targets)) {
       this.holdSec += dt;
-      if (this.holdSec >= gameConfig.targets.completionHoldSec) this.status = "complete";
+      if (this.holdSec >= gameConfig.targets.completionHoldSec) this.finalizeCompletion();
     } else {
       this.holdSec = 0;
     }

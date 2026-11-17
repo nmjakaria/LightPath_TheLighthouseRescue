@@ -79,6 +79,7 @@ export function useGameRuntime(
     const palette = readPalette(getComputedStyle(document.documentElement));
     const view = new ViewTransform();
     const state = new GameState(level, rotationStepRef.current);
+    state.reducedMotion = reducedMotionRef.current;
     const input = new InputController();
     const renderer = new SceneRenderer(view, [
       new BackgroundLayer(palette),
@@ -102,6 +103,7 @@ export function useGameRuntime(
     const loop = new GameLoop({
       processInput: () => {
         state.rotationStepDeg = rotationStepRef.current;
+        state.reducedMotion = reducedMotionRef.current;
         for (const command of input.drain()) state.apply(command);
       },
       update: (dt) => {

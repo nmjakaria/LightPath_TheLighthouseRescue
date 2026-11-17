@@ -14,4 +14,7 @@ export type InputCommand =
   | { type: "dragObstacleTo"; id: string; point: Vec2 }
   | { type: "endDragObstacle"; id: string }
   | { type: "undo" }
-  | { type: "reset" };
+  | { type: "reset" }
+  | { type: "hint" }
+  | { type: "pause"; paused: boolean }
+  | { type: "pauseToggle" };

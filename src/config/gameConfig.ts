@@ -78,6 +78,17 @@ export interface GameConfig {
     minScore: number;
     stars: { three: number; two: number };
   };
+  hints: {
+    max: number;
+    allSetText: string;
+    pulseHz: number;
+    outlineAlpha: number;
+    ghostAlpha: number;
+  };
+  completion: {
+    finaleSec: number;
+    hintPromptSec: number;
+  };
   quality: Record<QualityPreset, QualityPresetValues>;
   storage: { writeDebounceMs: number };
   render: {
@@ -152,6 +163,17 @@ export const gameConfig: GameConfig = {
     penaltyCap: 300,
     minScore: 100,
     stars: { three: 800, two: 500 },
+  },
+  hints: {
+    max: 3,
+    allSetText: "Everything matches the reference solution — follow the beam.",
+    pulseHz: 1.2,
+    outlineAlpha: 0.85,
+    ghostAlpha: 0.35,
+  },
+  completion: {
+    finaleSec: 2,
+    hintPromptSec: 60,
   },
   quality: {
     low: { particleCap: 80, moteCap: 15, glowPasses: 1, waterLayers: 2 },

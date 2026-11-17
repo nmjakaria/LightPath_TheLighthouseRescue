@@ -35,6 +35,13 @@ export function commandForKey(key: string, shiftKey: boolean): InputCommand | nu
     case "r":
     case "R":
       return { type: "reset" };
+    case "h":
+    case "H":
+      return { type: "hint" };
+    case "p":
+    case "P":
+    case "Escape":
+      return { type: "pauseToggle" };
     default:
       return null;
   }

@@ -30,7 +30,7 @@ describe("Level 1 data (PRD §13)", () => {
   });
 
   it("is registered in the ordered level index", () => {
-    expect(LEVELS).toHaveLength(1);
+    expect(LEVELS).toHaveLength(5);
     expect(getLevelById("level-01")).toBe(level01);
     expect(getLevelByIndex(1)).toBe(level01);
   });
