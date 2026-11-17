@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 5 — Screens and navigation — PARTIAL (2026-11-17). Implementation + gate PASS; real-browser interaction checks pending. Waiting for "next" before STEP 6.
+STEP 6 — Canvas foundation — PARTIAL (2026-11-17). Implementation + full gate passed; browser-only FPS and listener checks remain unverified. Waiting for "next" before STEP 7.
 
 ## Step log (date · step · status · commit)
 
@@ -13,8 +13,7 @@ STEP 5 — Screens and navigation — PARTIAL (2026-11-17). Implementation + gat
 | 2026-11-17 | 3 — Config, stores and settings core | PASS | 7337454 (feature) |
 | 2026-11-17 | 4 — UI primitives | PASS | e7c5154 (feature) |
 | 2026-11-17 | 5 — Screens and navigation | PARTIAL | 3e41f30 (feature) |
-| — | 6 — Canvas foundation | NOT STARTED | — |
-| — | 6 — Canvas foundation | NOT STARTED | — |
+| 2026-11-17 | 6 — Canvas foundation | PARTIAL | 1ce8167 (feature) |
 | — | 7 — Optics core | NOT STARTED | — |
 | — | 8 — Level 1 playable | NOT STARTED | — |
 | — | 9 — Remaining mechanics | NOT STARTED | — |
@@ -50,6 +49,12 @@ STEP 5 — Screens and navigation — PARTIAL (2026-11-17). Implementation + gat
 - Next.js 16 partial prerendering requires `usePathname()` inside Suspense. The root layout keeps ToastProvider outside the boundary and renders the page as the Suspense fallback, so static HTML still contains screen content; `/play/[levelId]` adds its own Suspense boundary around the awaited `params`.
 - The animated night scene is CSS-only (no Canvas yet) and uses token colours; actual Canvas rendering and performance work begin in STEP 6.
 - Real browser checks for menu clicks, Back behaviour, locked-URL redirects, confirmation dialogs and persisted settings after reload were not performed. SSR markup tests, production HTTP checks and Step 3 persistence tests cover everything except live interaction.
+- Step 6 renders only a Level-1-like **placeholder** scene (fixed mirrors and a static beam). Real state, optics and interaction arrive in STEP 8; the canvas is deliberately not yet a playable puzzle.
+- Canvas rendering needs concrete colours: `readPalette()` resolves CSS variables from `styles/tokens.css` once at mount and passes plain colour strings to the renderer. No hex value is duplicated in renderer code.
+- `useCanvasRuntime` keeps all listeners, `ResizeObserver`, the loop and layer disposal behind a hook; `GameCanvas.tsx` stays a thin JSX shell under the 120-line component budget. Next 16's `react-hooks/refs` rule rejects refs nested in a returned object, so refs are destructured at the call site.
+- `GameLoop` seeds its smoothed frame time from the first real interval; without that fix the first FPS reading was inflated by the smoothing factor. `dt` is clamped to `DT_CLAMP` and suspended frames reset `lastTime` so a tab return never spikes.
+- The dev FPS overlay uses `effective.showFps` or the `NEXT_PUBLIC_FPS_OVERLAY` flag; the sample interval lives in `uiConfig.fpsRefreshMs`, and DPR cap, FPS smoothing, star count and hit radius live in `gameConfig.render`.
+- The play route serves SSR markup with the "Lighting the lamp…" gate; `GameCanvas` mounts only after `useClientReady`, so no canvas element appears in the initial HTML. Real-browser idle FPS, visual resize behaviour and actual DOM-listener teardown were not measured (no browser automation available); frame-request teardown is covered by a 20-cycle unit test.
 
 ## PRD deviations (with justification)
 
@@ -84,6 +89,14 @@ STEP 5 — Screens and navigation — PARTIAL (2026-11-17). Implementation + gat
 - 2026-11-17, production server on ports 3105/3106: `/`, `/levels`, `/how-to-play`, `/settings`, `/about` and `/play/level-01` all returned HTTP 200; expected screen text was present. React inserts HTML comments between interpolated text nodes, so the version appears as `v<!-- -->0.1.0` in raw HTML.
 - 2026-11-17: largest Step 5 React component is `LevelSelection.tsx` at 87 lines (budget 120); `SettingRow.tsx` is 86 lines. No FPS, frame-time or bundle-size figures measured.
 
+## Step 6 measurements
+
+- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 135 tests in 19 files ✔ (17 new), `next build` ✔ (7 static routes plus `/play/[levelId]` partial prerender).
+- 2026-11-17: `ViewTransform` unit tests cover 50%/100%/200% scaling, a 1000×1000 letterboxed viewport, DPR cap at 2, zero-size safety and pointer→world round trips at DPR 3 (TC-G12 logic).
+- 2026-11-17: `GameLoop` unit tests cover dt clamp at 0.05 s, suspend/resume, stop/cancel, paused render, smoothed fps, non-finite timestamps and 20 start/stop cycles with zero orphan frame requests.
+- 2026-11-17: largest Step 6 source file is `PlaceholderSceneLayer.ts` at 160 lines (budget 250); largest React component is `GameCanvas.tsx` at 48 lines (budget 120).
+- 2026-11-17, user-owned dev server on `http://localhost:3000/play/level-01`: HTTP 200 with the SSR gate placeholder present. No FPS, frame-time or bundle-size figures measured.
+
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
 | ID | Status | ID | Status |
@@ -110,3 +123,5 @@ NFR-016: token text/background contrast pairs measured in Step 4 and all exceed 
 AC-15 / AC-21: focus ring is defined globally (`:focus-visible` cyan outline) and every interactive primitive exposes native keyboard semantics in SSR tests; actual browser Tab/Escape traversal not verified (no browser automation available).
 AC-02: Step 5 adds all menu routes, Back buttons, schema-driven settings, lock-toast redirects and error boundaries; SSR markup tests and production HTTP 200 checks pass, but live mouse/keyboard navigation, reload persistence and confirmation-dialog interaction remain not verified in a browser.
 FR-001–010: implemented across Step 5 screens and gating; real-browser acceptance is still pending, so the step status is PARTIAL rather than PASS.
+FR-061 / TC-G12: responsive 16:9 view transform, DPR cap and pointer inversion implemented and unit-tested in Step 6; zoom/letterbox rendering and idle 60 FPS still need a real browser.
+FR-062 / FR-063: quality and reduced-motion values are threaded into the canvas hook, but live switching and visible motion reduction are Steps 11–12 work; the STEP 6 preview only pauses its pulse clock when reduced motion is active.
