@@ -19,7 +19,7 @@ STEP 12 — Audio — PARTIAL (2026-11-18). Implementation and full gate pass (2
 | 2026-11-17 | 9 — Remaining mechanics | PARTIAL | 9e70f23 (feature) |
 | 2026-11-17 | 10 — Game rules, five levels, progression | PARTIAL | 7dec7aa (feature) |
 | 2026-11-17 | 11 — Visual polish | PARTIAL | 8f07acf (feature) |
-| 2026-11-18 | 12 — Audio | PARTIAL | 7ac6c24 (feature) |
+| 2026-11-18 | 12 — Audio | PARTIAL | 7db66fe (feature) |
 | — | 13 — Optics Inspector | NOT STARTED | — |
 | — | 14 — Accessibility, performance, hardening | NOT STARTED | — |
 | — | 15 — Documentation, deployment, demo readiness | NOT STARTED | — |
