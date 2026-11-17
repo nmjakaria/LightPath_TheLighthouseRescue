@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 4 — UI primitives — PASS (2026-11-17). Waiting for "next" before STEP 5.
+STEP 5 — Screens and navigation — PARTIAL (2026-11-17). Implementation + gate PASS; real-browser interaction checks pending. Waiting for "next" before STEP 6.
 
 ## Step log (date · step · status · commit)
 
@@ -12,8 +12,8 @@ STEP 4 — UI primitives — PASS (2026-11-17). Waiting for "next" before STEP 5
 | 2026-11-17 | 2 — Math foundation | PASS | 6e58f38 (feature) |
 | 2026-11-17 | 3 — Config, stores and settings core | PASS | 7337454 (feature) |
 | 2026-11-17 | 4 — UI primitives | PASS | e7c5154 (feature) |
-| — | 4 — UI primitives | NOT STARTED | — |
-| — | 5 — Screens and navigation | NOT STARTED | — |
+| 2026-11-17 | 5 — Screens and navigation | PARTIAL | 3e41f30 (feature) |
+| — | 6 — Canvas foundation | NOT STARTED | — |
 | — | 6 — Canvas foundation | NOT STARTED | — |
 | — | 7 — Optics core | NOT STARTED | — |
 | — | 8 — Level 1 playable | NOT STARTED | — |
@@ -45,6 +45,11 @@ STEP 4 — UI primitives — PASS (2026-11-17). Waiting for "next" before STEP 5
 - `/dev/ui` is "excluded from production" by rendering an inert fallback when `NODE_ENV === "production"` (or the flag is off); the route is still prerendered but exposes no showcase content.
 - Toast duration/cap, ring geometry and star count live in `src/config/uiConfig.ts`; Tailwind utilities reference only the CSS-variable palette in `tokens.css`.
 - A pre-existing user-owned `next dev` server on port 3000 shares `.next`, so a second dev server could not be started for browser verification. The showcase and primitive markup are instead verified with `react-dom/server` tests; real browser tab traversal and focus movement remain unverified.
+- Step 5 keeps only level names/objectives/preview kinds in `src/config/levelCatalog.ts`; full coordinates and solutions remain for STEP 10 so menus never import unfinished level data.
+- Route gating waits for `useClientReady` before reading persisted unlocks: LocalStorage is unavailable during SSR, so checking immediately would falsely redirect saved unlocked levels on the first client commit.
+- Next.js 16 partial prerendering requires `usePathname()` inside Suspense. The root layout keeps ToastProvider outside the boundary and renders the page as the Suspense fallback, so static HTML still contains screen content; `/play/[levelId]` adds its own Suspense boundary around the awaited `params`.
+- The animated night scene is CSS-only (no Canvas yet) and uses token colours; actual Canvas rendering and performance work begin in STEP 6.
+- Real browser checks for menu clicks, Back behaviour, locked-URL redirects, confirmation dialogs and persisted settings after reload were not performed. SSR markup tests, production HTTP checks and Step 3 persistence tests cover everything except live interaction.
 
 ## PRD deviations (with justification)
 
@@ -73,6 +78,12 @@ STEP 4 — UI primitives — PASS (2026-11-17). Waiting for "next" before STEP 5
 - 2026-11-17, contrast ratios computed from `src/styles/tokens.css` by unit test: Soft White/Midnight 16.76:1, Abyss/Cyan Beam 11.07:1, Mist/Midnight 8.46:1, Soft White/Deep Navy 14.42:1, Mist/Deep Navy 7.28:1, Abyss/Danger 7.24:1, Abyss/Star Gold 13.88:1 — all ≥4.5:1.
 - 2026-11-17: largest UI source file is `Toast.tsx` at 139 lines (budget 250); largest React component is `UiShowcase` at 101 lines (budget 120).
 
+## Step 5 measurements
+
+- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 118 tests in 16 files ✔ (24 new), `next build` ✔. Build output: 9 static routes plus `/play/[levelId]` as partial prerender.
+- 2026-11-17, production server on ports 3105/3106: `/`, `/levels`, `/how-to-play`, `/settings`, `/about` and `/play/level-01` all returned HTTP 200; expected screen text was present. React inserts HTML comments between interpolated text nodes, so the version appears as `v<!-- -->0.1.0` in raw HTML.
+- 2026-11-17: largest Step 5 React component is `LevelSelection.tsx` at 87 lines (budget 120); `SettingRow.tsx` is 86 lines. No FPS, frame-time or bundle-size figures measured.
+
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
 | ID | Status | ID | Status |
@@ -97,3 +108,5 @@ AC-22: Step 2 enforces ≥90% coverage on `src/lib/math`; optics, scoring and va
 FR-053–057: settings schema, validation, debounced/blocked-storage persistence, migrations and effective settings implemented and unit-tested in Step 3; TC-E10 and TC-F09 logic covered.
 NFR-016: token text/background contrast pairs measured in Step 4 and all exceed 4.5:1; shape cues are a Step 10/14 concern.
 AC-15 / AC-21: focus ring is defined globally (`:focus-visible` cyan outline) and every interactive primitive exposes native keyboard semantics in SSR tests; actual browser Tab/Escape traversal not verified (no browser automation available).
+AC-02: Step 5 adds all menu routes, Back buttons, schema-driven settings, lock-toast redirects and error boundaries; SSR markup tests and production HTTP 200 checks pass, but live mouse/keyboard navigation, reload persistence and confirmation-dialog interaction remain not verified in a browser.
+FR-001–010: implemented across Step 5 screens and gating; real-browser acceptance is still pending, so the step status is PARTIAL rather than PASS.
