@@ -14,6 +14,8 @@ import {
 } from "react";
 import { uiConfig } from "@/config/uiConfig";
 import type { QualityPresetValues } from "@/config/gameConfig";
+import { AudioEvents } from "@/engine/audio/AudioEvents";
+import type { AudioManager } from "@/engine/audio/AudioManager";
 import { GameLoop } from "@/engine/core/GameLoop";
 import { GameState, type HudSnapshot } from "@/engine/core/GameState";
 import { pendingDrag, type DragMode, type PendingDrag } from "@/engine/core/drag";
@@ -46,6 +48,7 @@ export function useGameRuntime(
   reducedMotion: boolean,
   rotationStepDeg: number,
   qualityPreset: QualityPresetValues,
+  audio: AudioManager,
 ): GameRuntime {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -57,6 +60,7 @@ export function useGameRuntime(
   const reducedMotionRef = useRef(reducedMotion);
   const rotationStepRef = useRef(rotationStepDeg);
   const visualSettingsRef = useRef<VisualSettings>({ quality: qualityPreset, reducedMotion });
+  const audioEventsRef = useRef(new AudioEvents());
   const store = useMemo(() => createStore(new GameState(level).snapshot()), [level]);
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 
@@ -76,6 +80,7 @@ export function useGameRuntime(
     const palette = readPalette(getComputedStyle(document.documentElement));
     const view = new ViewTransform();
     const state = new GameState(level, rotationStepRef.current);
+    audioEventsRef.current.reset();
     state.reducedMotion = reducedMotionRef.current;
     const input = new InputController();
     const visuals = createVisualRuntime(view, palette, state, visualSettingsRef.current);
@@ -102,6 +107,7 @@ export function useGameRuntime(
       update: (dt) => {
         sincePublishMs += dt * 1000;
         state.tick(dt);
+        audioEventsRef.current.detect(state, audio);
         visuals.setSettings(visualSettingsRef.current);
         visuals.update(dt, state);
         if (sincePublishMs >= uiConfig.hudRefreshMs) {
@@ -146,7 +152,7 @@ export function useGameRuntime(
       loopRef.current = null;
       dragRef.current = null;
     };
-  }, [level, store]);
+  }, [level, store, audio]);
 
   const pointerWorld = useCallback((event: PointerEvent<HTMLCanvasElement>): Vec2 => {
     const rect = event.currentTarget.getBoundingClientRect();

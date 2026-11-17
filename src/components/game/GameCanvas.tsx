@@ -7,6 +7,7 @@ import { features } from "@/config/features";
 import { uiConfig } from "@/config/uiConfig";
 import type { QualityPresetValues } from "@/config/gameConfig";
 import type { HudSnapshot } from "@/engine/core/GameState";
+import { useAudio } from "@/hooks/useAudio";
 import { useGameRuntime } from "@/hooks/useGameRuntime";
 import { useProgress } from "@/hooks/useProgress";
 import { useSettings } from "@/hooks/useSettings";
@@ -54,7 +55,8 @@ interface PlayableGameProps {
 }
 
 function PlayableGame({ level, reducedMotion, rotationStepDeg, qualityPreset, showFps }: PlayableGameProps) {
-  const runtime = useGameRuntime(level, reducedMotion, rotationStepDeg, qualityPreset);
+  const audio = useAudio();
+  const runtime = useGameRuntime(level, reducedMotion, rotationStepDeg, qualityPreset, audio);
   const { progress, recordCompletion, recordAttempt, markTutorialSeen } = useProgress();
   const { containerRef, canvasRef, snapshot, dispatch, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats } = runtime;
   const [fps, setFps] = useState({ value: 0, frameMs: 0 });

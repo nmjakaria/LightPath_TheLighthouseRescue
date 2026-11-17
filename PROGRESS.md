@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 11 — Visual polish — PARTIAL (2026-11-17). Implementation and full gate pass (270 tests); real-browser visual, FPS and CPU-throttle checks remain unverified. Waiting for "next" before STEP 12.
+STEP 12 — Audio — PARTIAL (2026-11-18). Implementation and full gate pass (286 tests); real-browser gesture unlock, audibility and mute persistence remain unverified. Waiting for "next" before STEP 13.
 
 ## Step log (date · step · status · commit)
 
@@ -19,7 +19,7 @@ STEP 11 — Visual polish — PARTIAL (2026-11-17). Implementation and full gate
 | 2026-11-17 | 9 — Remaining mechanics | PARTIAL | 9e70f23 (feature) |
 | 2026-11-17 | 10 — Game rules, five levels, progression | PARTIAL | 7dec7aa (feature) |
 | 2026-11-17 | 11 — Visual polish | PARTIAL | 8f07acf (feature) |
-| — | 12 — Audio | NOT STARTED | — |
+| 2026-11-18 | 12 — Audio | PARTIAL | 7ac6c24 (feature) |
 | — | 13 — Optics Inspector | NOT STARTED | — |
 | — | 14 — Accessibility, performance, hardening | NOT STARTED | — |
 | — | 15 — Documentation, deployment, demo readiness | NOT STARTED | — |
@@ -95,6 +95,14 @@ STEP 11 — Visual polish — PARTIAL (2026-11-17). Implementation and full gate
 - `BeamLayer` now honours `quality.glowPasses` by drawing the brightest N passes and adds the PRD §12.5 moving dash highlight; the highlight is disabled under reduced motion.
 - Drag intent/types moved to `src/engine/core/drag.ts` so `useGameRuntime.ts` stays at 241 lines after wiring quality and particles.
 - Real-browser visual checks for TC-G10 (CPU-throttled motion speed), FR-058/063 (twinkle/sweep/mist/reduced motion), FR-059/060 (glow and additive overlap) and the darkness atmosphere were not performed; pure-function time-equivalence and cap tests cover the logic only.
+- STEP 12 audio is fully synthesized (oscillators plus generated noise); no audio files, samples or new assets are required.
+- `AudioContext` is injected into `AudioManager` so Node tests can use a fake graph; the browser factory still supports `webkitAudioContext` and degrades to silence when unavailable.
+- One app-wide `audioManager` singleton survives route changes. `AudioBridge` at the app root installs the first-gesture unlock and mirrors persisted settings into it; components use `useAudio()` rather than importing the engine.
+- `AudioEvents` detects state transitions and emits cue names; `AudioManager` owns throttling, gain routing and the voice cap, so event detection needs no Web Audio types.
+- A jingle counts as one voice even though it schedules several oscillators; the 8-voice PRD cap applies to concurrent cue events, which is the practical definition of "no overlap spam".
+- All audio tunables (frequencies, durations, throttles, ambience levels, voice cap) live in `src/config/audioConfig.ts`; manager defaults are read from `settingsSchema.DEFAULT_SETTINGS` rather than duplicated numbers.
+- A delegated document-level click listener plays the UI cue, so existing UI primitives needed no audio imports; the same first pointer/key gesture unlocks Web Audio for every screen.
+- Real-browser autoplay unlock, audible cue quality, instant mute while sound is playing and persistence after reload were not verified without browser automation; Node tests cover the graph, gains and transitions only.
 
 ## PRD deviations (with justification)
 
@@ -179,6 +187,14 @@ STEP 11 — Visual polish — PARTIAL (2026-11-17). Implementation and full gate
 - 2026-11-17: largest Step 11 source file is `ParticlePool.ts` at 249 lines (budget 250), then `useGameRuntime.ts` 241, `GameCanvas.tsx` 136, `emitters.ts` 161, `EnvironmentLayer.ts` 110, `BeamLayer.ts` 92; all React components remain under the 120-line budget. No hardcoded hex colours in the new renderer/particle files.
 - No FPS, frame-time, bundle-size or CPU-throttle figures were measured in this step; no browser automation was available.
 
+## Step 12 measurements
+
+- 2026-11-18, Node v22.22.3 / npm 11.15.0: full gate passes sequentially — lint ✔ (0 warnings), typecheck ✔, 286 tests in 49 files ✔ (16 new), `next build` ✔ (7 static routes plus `/play/[levelId]` partial prerender).
+- 2026-11-18, new audio tests: `AudioManager` 10 tests (locked/no-op play, unlock/resume, gains/mute, looping ambience, pitch by angle step, jingles/noise, throttle, 8-voice cap, expiry, dispose, unsupported browser) and `AudioEvents` 6 tests (initial state, rotation step, charge/activation transitions, gate changes, one-shot completion, rotatable source).
+- 2026-11-18: largest Step 12 source file is `AudioManager.ts` at 226 lines, then `useGameRuntime.ts` at 247; `AudioBridge.tsx` is 9 lines and `useAudio.ts` 46 — all under AGENTS budgets (250 source / 120 component).
+- 2026-11-18, 500 four-mirror solves in the passing gate run (no coverage instrumentation): average 0.1046 ms, p95 0.1706 ms, max 4.7163 ms.
+- No browser audio, FPS, frame-time or bundle-size figures were measured in this step; no browser automation was available.
+
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
 | ID | Status | ID | Status |
@@ -209,3 +225,4 @@ FR-061 / TC-G12: responsive 16:9 view transform, DPR cap and pointer inversion i
 FR-062 / FR-063: quality and reduced-motion now apply live in Step 11 through a shared mutable `VisualSettings` object (particle caps, glow passes, water layers, sweep/particle damping); unit tests cover the caps and time-equivalence, but visible live switching needs a real browser (unverified). FR-058–061: pooled particles, cached glow sprites, additive beam overlap, stars/water/mist/sweep and the Level 4 darkness mask are implemented; TC-G10/G11 logic is unit-tested, visual and CPU-throttle demos remain unverified.
 TC-F03 / AC-06: 20 reflection pairs pass the independent 2θ−φ oracle in Step 7; the 4-bounce chain coordinates assertion is a test-scene check, not a Level 2 reference (levels arrive in STEP 10).
 AC-14: TC-X01–X08 now all pass (X05/X06 were added in Step 9). AC-22 still has ≥90% optics coverage after prism/gate additions; scoring and validator statement coverage were measured in STEP 10, with branch coverage still to be raised in STEP 14.
+FR-050 / FR-051: all seven cue families, first-gesture unlock, master/SFX/ambient gains, instant mute, 8-voice cap and per-cue throttling are implemented and unit-tested in STEP 12. Real-browser audibility, autoplay behaviour and saved-setting restoration remain unverified, so the step status is PARTIAL.
