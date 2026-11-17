@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 7 — Optics core — PASS (2026-11-17). Full gate and all step-specific optics checks passed. Waiting for "next" before STEP 8.
+STEP 8 — Level 1 playable — PASS (2026-11-17). Full gate and all step-specific checks passed. Waiting for "next" before STEP 9.
 
 ## Step log (date · step · status · commit)
 
@@ -15,8 +15,7 @@ STEP 7 — Optics core — PASS (2026-11-17). Full gate and all step-specific op
 | 2026-11-17 | 5 — Screens and navigation | PARTIAL | 3e41f30 (feature) |
 | 2026-11-17 | 6 — Canvas foundation | PARTIAL | 1ce8167 (feature) |
 | 2026-11-17 | 7 — Optics core | PASS | 8811c38 (feature) |
-| — | 7 — Optics core | NOT STARTED | — |
-| — | 8 — Level 1 playable | NOT STARTED | — |
+| 2026-11-17 | 8 — Level 1 playable | PASS | e519bd4 (feature) |
 | — | 9 — Remaining mechanics | NOT STARTED | — |
 | — | 10 — Game rules, five levels, progression | NOT STARTED | — |
 | — | 11 — Visual polish | NOT STARTED | — |
@@ -62,6 +61,15 @@ STEP 7 — Optics core — PASS (2026-11-17). Full gate and all step-specific op
 - Primitive building and nearest-hit tie priority live in `src/engine/optics/primitives.ts`; `tracer.ts` stayed under the 250-line file budget after extraction.
 - `solveOptics` takes an injectable clock so tests can measure or freeze `stats.solveMs`; production uses `performance.now()`. Arrays are allocated once at `MAX_SEGMENTS` capacity and trimmed at the end, avoiding repeated growth during a solve.
 - A non-finite mirror is skipped (with a dev-only warning) rather than aborting the whole solve; a non-finite source is skipped and counted under `terminated.invalid`.
+- Step 8 corrects the default lamp housing radius from 18 to 16 wu to match PRD §13's common rules; the stale Step 7 transform expectation was updated. Level 1 sources rely on this config default rather than duplicating the number in level data.
+- `src/types/level.ts` carries the full PRD §19 level schema and `src/levels/level-01.ts` is data only. `src/levels/index.ts` currently registers Level 1 alone; Levels 2–5 arrive in STEP 10.
+- The engine state machine lives in `src/engine/core/GameState.ts`; pointer/keyboard listeners only enqueue `InputCommand`s, which the loop drains once per frame. Undo stores angle snapshots bounded by `UNDO_LIMIT` and never refunds moves.
+- Mirror angles snap to 15° (or the 5° fine step) modulo the 180° mirror period; a drag commits one move on pointer-up and unchanged drags commit nothing.
+- Target charge uses the PRD 0.35 s activation time and 0.6 s completion hold; the solver runs only when a command changes geometry, and a `solveCount` counter is exposed for the idle-frame test.
+- The HUD snapshot is published through a tiny `createStore` at ≤10 Hz via `useSyncExternalStore`; the canvas hook keeps level, settings and loop refs so changing settings never remounts the engine mid-attempt.
+- `useGameRuntime` tracks a pending drag id separately from `GameState.dragId` so a pointer-down/up pair that happens between frames is still committed exactly once.
+- Beam pass widths/alphas, component line widths, lamp radii and label size moved into `gameConfig.render`; light-channel colours come from CSS-variable tokens resolved once by `readPalette()`.
+- Real-browser drag/rotate interaction, focus traversal and FPS were still not measured; automated tests cover command flow, snapping, undo/reset, 2× reflection, idle solves and completion, and `/play/level-01` was checked over HTTP only.
 
 ## PRD deviations (with justification)
 
@@ -111,6 +119,14 @@ STEP 7 — Optics core — PASS (2026-11-17). Full gate and all step-specific op
 - 2026-11-17, 500 four-mirror solves (node environment, no coverage instrumentation): average 0.0799 ms, p95 0.1242 ms, max 1.5372 ms; the assertion requires average < 2 ms.
 - 2026-11-17: largest optics source file is `tracer.ts` at 181 lines (budget 250); `primitives.ts` 124, `transform.ts` 69, `intersect.ts` 68, `reflect.ts` 23.
 - TC-F03 covered with 20 (φ, θ) pairs; TC-G01–G04, TC-E01–E03, TC-E05, TC-X01–X04, TC-X07 and TC-X08 all have dedicated unit tests. No browser measurement in this step.
+
+## Step 8 measurements
+
+- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 198 tests in 32 files ✔ (29 new), `next build` ✔ (7 static routes plus `/play/[levelId]` partial prerender).
+- 2026-11-17, user-owned dev server on `http://localhost:3000/play/level-01`: HTTP 200 (16,697 bytes SSR markup). No browser interaction or FPS measurement.
+- 2026-11-17: largest new engine file is `GameState.ts` at 248 lines, `useGameRuntime.ts` 238, `ComponentsLayer.ts` 112, `GameCanvas.tsx` 98; all under the AGENTS budgets (250/250/120).
+- TC-F01/F02/F08/F15 logic is covered by 12 `GameState` tests; the reflection oracle asserts a 90° heading change for a 45° mirror rotation (2× rule); the idle-frame test asserts `solveCount` stays at 1 across two unchanged ticks.
+- Level 1 solution replay (`M1=135°`, `M2=135°`) completes after charge + hold; the initial state does not complete after 2 s of idle ticks.
 
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
