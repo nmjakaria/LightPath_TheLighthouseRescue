@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { features } from "@/config/features";
 import { uiConfig } from "@/config/uiConfig";
+import type { QualityPresetValues } from "@/config/gameConfig";
 import type { HudSnapshot } from "@/engine/core/GameState";
 import { useGameRuntime } from "@/hooks/useGameRuntime";
 import { useProgress } from "@/hooks/useProgress";
@@ -38,6 +39,7 @@ export function GameCanvas({ levelId = "level-01" }: { levelId?: string }) {
       level={level}
       reducedMotion={effective.reducedMotion}
       rotationStepDeg={effective.rotationStepDeg}
+      qualityPreset={effective.qualityPreset}
       showFps={effective.showFps || features.fpsOverlay}
     />
   );
@@ -47,11 +49,12 @@ interface PlayableGameProps {
   level: LevelConfig;
   reducedMotion: boolean;
   rotationStepDeg: number;
+  qualityPreset: QualityPresetValues;
   showFps: boolean;
 }
 
-function PlayableGame({ level, reducedMotion, rotationStepDeg, showFps }: PlayableGameProps) {
-  const runtime = useGameRuntime(level, reducedMotion, rotationStepDeg);
+function PlayableGame({ level, reducedMotion, rotationStepDeg, qualityPreset, showFps }: PlayableGameProps) {
+  const runtime = useGameRuntime(level, reducedMotion, rotationStepDeg, qualityPreset);
   const { progress, recordCompletion, recordAttempt, markTutorialSeen } = useProgress();
   const { containerRef, canvasRef, snapshot, dispatch, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats } = runtime;
   const [fps, setFps] = useState({ value: 0, frameMs: 0 });

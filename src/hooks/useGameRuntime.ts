@@ -13,29 +13,20 @@ import {
   type RefObject,
 } from "react";
 import { uiConfig } from "@/config/uiConfig";
+import type { QualityPresetValues } from "@/config/gameConfig";
 import { GameLoop } from "@/engine/core/GameLoop";
 import { GameState, type HudSnapshot } from "@/engine/core/GameState";
+import { pendingDrag, type DragMode, type PendingDrag } from "@/engine/core/drag";
 import { InputController, commandForKey } from "@/engine/core/InputController";
 import { ViewTransform } from "@/engine/core/ViewTransform";
-import { SceneRenderer } from "@/engine/render/SceneRenderer";
-import { BeamLayer } from "@/engine/render/layers/BeamLayer";
-import { BackgroundLayer } from "@/engine/render/layers/BackgroundLayer";
-import { ComponentsLayer } from "@/engine/render/layers/ComponentsLayer";
+import { createVisualRuntime } from "@/engine/render/createLayers";
 import { readPalette } from "@/engine/render/palette";
+import type { VisualSettings } from "@/engine/render/visualSettings";
 import { pickComponent, pointerAngle } from "@/game/picking";
 import { createStore } from "@/lib/store/createStore";
 import type { InputCommand } from "@/types/input";
 import type { LevelConfig } from "@/types/level";
 import type { Vec2 } from "@/types/vec2";
-
-type DragMode = "rotate" | "obstacle";
-interface PendingDrag { id: string; mode: DragMode }
-
-function pendingDrag(state: GameState, ref: RefObject<PendingDrag | null>): PendingDrag | null {
-  if (ref.current) return ref.current;
-  if (state.obstacleDragId) return { id: state.obstacleDragId, mode: "obstacle" };
-  return state.dragId ? { id: state.dragId, mode: "rotate" } : null;
-}
 
 export interface GameRuntime {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -54,6 +45,7 @@ export function useGameRuntime(
   level: LevelConfig,
   reducedMotion: boolean,
   rotationStepDeg: number,
+  qualityPreset: QualityPresetValues,
 ): GameRuntime {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -64,11 +56,16 @@ export function useGameRuntime(
   const dragRef = useRef<PendingDrag | null>(null);
   const reducedMotionRef = useRef(reducedMotion);
   const rotationStepRef = useRef(rotationStepDeg);
+  const visualSettingsRef = useRef<VisualSettings>({ quality: qualityPreset, reducedMotion });
   const store = useMemo(() => createStore(new GameState(level).snapshot()), [level]);
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 
-  useEffect(() => { reducedMotionRef.current = reducedMotion; }, [reducedMotion]);
+  useEffect(() => {
+    reducedMotionRef.current = reducedMotion;
+    visualSettingsRef.current.reducedMotion = reducedMotion;
+  }, [reducedMotion]);
   useEffect(() => { rotationStepRef.current = rotationStepDeg; }, [rotationStepDeg]);
+  useEffect(() => { visualSettingsRef.current.quality = qualityPreset; }, [qualityPreset]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -81,11 +78,7 @@ export function useGameRuntime(
     const state = new GameState(level, rotationStepRef.current);
     state.reducedMotion = reducedMotionRef.current;
     const input = new InputController();
-    const renderer = new SceneRenderer(view, [
-      new BackgroundLayer(palette),
-      new ComponentsLayer(palette, state),
-      new BeamLayer(palette, state),
-    ]);
+    const visuals = createVisualRuntime(view, palette, state, visualSettingsRef.current);
     stateRef.current = state;
     inputRef.current = input;
     viewRef.current = view;
@@ -109,12 +102,14 @@ export function useGameRuntime(
       update: (dt) => {
         sincePublishMs += dt * 1000;
         state.tick(dt);
+        visuals.setSettings(visualSettingsRef.current);
+        visuals.update(dt, state);
         if (sincePublishMs >= uiConfig.hudRefreshMs) {
           sincePublishMs = 0;
           store.set(state.snapshot());
         }
       },
-      render: (stats) => renderer.render(ctx, stats),
+      render: (stats) => visuals.renderer.render(ctx, stats),
     });
     loopRef.current = loop;
 
@@ -144,7 +139,7 @@ export function useGameRuntime(
       window.removeEventListener("resize", resize);
       window.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("visibilitychange", onVisibility);
-      renderer.dispose();
+      visuals.renderer.dispose();
       stateRef.current = null;
       inputRef.current = null;
       viewRef.current = null;
