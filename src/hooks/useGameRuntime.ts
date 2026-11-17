@@ -43,6 +43,7 @@ export function useGameRuntime(
   reducedMotion: boolean,
   rotationStepDeg: number,
   qualityPreset: QualityPresetValues,
+  colorblindAid: boolean,
   audio: AudioManager,
 ): GameRuntime {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -55,7 +56,7 @@ export function useGameRuntime(
   const reducedMotionRef = useRef(reducedMotion);
   const rotationStepRef = useRef(rotationStepDeg);
   const visualSettingsRef = useRef<VisualSettings>({
-    quality: qualityPreset, reducedMotion,
+    quality: qualityPreset, reducedMotion, colorblindAid,
     glowEnabled: inspectorConfig.defaults.glow, particlesEnabled: inspectorConfig.defaults.particles,
   });
   const audioEventsRef = useRef(new AudioEvents());
@@ -68,6 +69,7 @@ export function useGameRuntime(
   }, [reducedMotion]);
   useEffect(() => { rotationStepRef.current = rotationStepDeg; }, [rotationStepDeg]);
   useEffect(() => { visualSettingsRef.current.quality = qualityPreset; }, [qualityPreset]);
+  useEffect(() => { visualSettingsRef.current.colorblindAid = colorblindAid; }, [colorblindAid]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

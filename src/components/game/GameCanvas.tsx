@@ -52,6 +52,7 @@ export function GameCanvas({ levelId = "level-01" }: { levelId?: string }) {
       reducedMotion={effective.reducedMotion}
       rotationStepDeg={effective.rotationStepDeg}
       qualityPreset={effective.qualityPreset}
+      colorblindAid={effective.colorblindAid}
       showFps={effective.showFps || features.fpsOverlay}
     />
   );
@@ -62,6 +63,7 @@ interface PlayableGameProps {
   reducedMotion: boolean;
   rotationStepDeg: number;
   qualityPreset: QualityPresetValues;
+  colorblindAid: boolean;
   showFps: boolean;
 }
 
@@ -70,10 +72,11 @@ function PlayableGame({
   reducedMotion,
   rotationStepDeg,
   qualityPreset,
+  colorblindAid,
   showFps,
 }: PlayableGameProps) {
   const audio = useAudio();
-  const runtime = useGameRuntime(level, reducedMotion, rotationStepDeg, qualityPreset, audio);
+  const runtime = useGameRuntime(level, reducedMotion, rotationStepDeg, qualityPreset, colorblindAid, audio);
   const { progress, recordCompletion, recordAttempt, markTutorialSeen } = useProgress();
   const { containerRef, canvasRef, snapshot, dispatch, getStats, getSelectableIds, getSelectedId } = runtime;
   const { onPointerDown, onPointerMove, onPointerUp, onPointerLeave } = runtime;

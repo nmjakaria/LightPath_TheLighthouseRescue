@@ -58,6 +58,13 @@ describe("target colour shape cues (NFR-016)", () => {
     expect(ctx.stroke).not.toHaveBeenCalled();
   });
 
+  it("honours the colorblindAid setting and draws no shape when it is off", () => {
+    const ctx = context();
+    drawTargetShape(ctx as unknown as CanvasRenderingContext2D, "red", CORE, palette, false);
+    expect(ctx.beginPath).not.toHaveBeenCalled();
+    expect(ctx.stroke).not.toHaveBeenCalled();
+  });
+
   it("draws a red triangle, green circle and blue square with the matching token colour", () => {
     const red = context();
     drawTargetShape(red as unknown as CanvasRenderingContext2D, "red", CORE, palette);

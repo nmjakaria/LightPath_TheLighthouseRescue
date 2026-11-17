@@ -7,4 +7,5 @@ export interface VisualSettings {
   reducedMotion: boolean;
   glowEnabled: boolean;
   particlesEnabled: boolean;
+  colorblindAid: boolean;
 }

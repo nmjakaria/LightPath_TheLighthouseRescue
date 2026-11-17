@@ -1,4 +1,7 @@
-/** Next.js build and runtime configuration. Security headers are report-only in Step 1. */
+/** Next.js build and runtime configuration. Security headers are report-only in Step 1; static
+ * export (Plan B, PRD §26.4) is selected only by `npm run build:static`. */
+
+const isStaticExport = process.env.LIGHTPATH_STATIC_EXPORT === "1";
 
 const securityHeaders = [
   {
@@ -23,11 +26,6 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
-  experimental: {
-    agentFeedback: true,
-  },
-  cacheComponents: true,
-  partialPrefetching: true,
   turbopack: {
     rules: {
       "*.css": {
@@ -36,9 +34,23 @@ const nextConfig = {
       },
     },
   },
-  async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
-  },
+  ...(isStaticExport
+    ? {
+        distDir: ".next-static",
+        output: "export",
+        trailingSlash: true,
+        cacheComponents: false,
+        partialPrefetching: false,
+        experimental: { agentFeedback: false },
+      }
+    : {
+        experimental: { agentFeedback: true },
+        cacheComponents: true,
+        partialPrefetching: true,
+        async headers() {
+          return [{ source: "/(.*)", headers: securityHeaders }];
+        },
+      }),
 };
 
 export default nextConfig;

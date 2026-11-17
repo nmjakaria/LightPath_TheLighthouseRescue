@@ -1,7 +1,14 @@
 import { Suspense } from "react";
 import { PlayRouteGate } from "@/components/game/PlayRouteGate";
+import { LEVELS } from "@/levels";
 
 export const metadata = { title: "Play — LightPath" };
+
+/** Static export needs one concrete file per playable level (PRD §26.4). */
+export function generateStaticParams(): { levelId: string }[] {
+  return LEVELS.map((level) => ({ levelId: level.id }));
+}
+
 
 async function PlayPageContent({ params }: { params: Promise<{ levelId: string }> }) {
   const { levelId } = await params;

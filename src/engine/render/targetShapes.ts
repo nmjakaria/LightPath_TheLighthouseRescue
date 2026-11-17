@@ -21,9 +21,10 @@ export function drawTargetShape(
   requires: TargetColor,
   coreRadius: number,
   palette: Palette,
+  enabled = true,
 ): void {
   const shape = targetShapeFor(requires);
-  if (!shape) return;
+  if (!shape || !enabled) return;
   const size = coreRadius * gameConfig.render.targetShapeFraction;
   ctx.save();
   ctx.strokeStyle =

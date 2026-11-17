@@ -68,3 +68,50 @@ Only strictly better results replace a stored best (`recordCompletion`). `bestTi
 `bestMoves` are tracked independently because the highest-scoring attempt is not necessarily the
 fastest or the tidiest. `recordAttempt` increments the attempt counter; `markTutorialSeen` records
 one-time tutorial toasts.
+
+## Current setting inventory
+
+| Group | Keys | Consumer |
+| --- | --- | --- |
+| Audio | `masterVolume`, `sfxVolume`, `ambientVolume`, `muted` | `AudioBridge` mirrors effective values into `AudioManager`. |
+| Graphics | `quality`, `showFps` | `resolveSettings` expands quality; `GameCanvas` shows the FPS badge. |
+| Gameplay | `rotationStepDeg` | `useGameRuntime` sends the step to `InputController`. |
+| Accessibility | `reducedMotion`, `colorblindAid` | Renderer visual settings; colour target shape cues are drawn only when the aid is enabled. |
+| Developer / Demo | `demoUnlockAll` | `useProgress` derives unlock state; key **U** is wired only when the feature flag allows it. |
+
+`quality: "auto"` uses `hardwareConcurrency` and `deviceMemory` from `detectEnvironment()` to pick
+low/medium/high before expanding to renderer caps: low 80/15/1/2, medium 200/40/2/3, high
+400/80/3/4 for particle cap / mote cap / glow passes / water layers. `reducedMotion: "system"` reads
+`prefers-reduced-motion`; SSR uses a safe default until hydration.
+
+The renderer never reads a store. `GameCanvas` passes effective values through `useGameRuntime`,
+which mutates one shared `VisualSettings` object. `setSettings()` applies quality, reduced motion,
+glow, particles and `colorblindAid` live without remounting the canvas.
+
+## Data actions
+
+`SettingsDataActions` offers **Reset settings** and **Reset progress**, each behind a confirmation
+modal. Optional JSON export/import was not implemented; progress can be reset from the UI, and no
+save data is sent anywhere. Both stores revalidate defaults after reset.
+
+## Feature flags
+
+Flags are developer/build-time values in `src/config/features.ts`, not persisted user settings.
+Copy `.env.example` to `.env.local` and set any of the following before `npm run dev` or
+`npm run build`:
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `NEXT_PUBLIC_DEV_UI_PAGE` | `false` | Enables the `/dev/ui` showcase in development. |
+| `NEXT_PUBLIC_INSPECTOR_ENABLED` | `true` | Allows the Optics Inspector. |
+| `NEXT_PUBLIC_DEMO_UNLOCK_AVAILABLE` | `false` | Shows the demo-unlock toggle and enables the **U** key. |
+| `NEXT_PUBLIC_FPS_OVERLAY` | `false` | Forces the FPS badge even when the user setting is off. |
+
+Static export uses the same flags baked in at build time. No environment variable is required for
+the MVP; the demo-unlock flag is only needed for rapid presentation access to every level.
+
+## Definition of done for a new setting
+
+A setting is finished only when the schema entry, default, validation/clamping, automatic Settings
+row, effective-settings consumer and a unit test all exist. See `tests/unit/lib/settings.test.ts`
+and `tests/unit/render/targetShapes.test.ts` for the current examples.

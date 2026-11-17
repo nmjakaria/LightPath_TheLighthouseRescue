@@ -17,6 +17,7 @@ import {
   drawSwitch,
 } from "../componentShapes";
 import { drawTargetShape } from "../targetShapes";
+import type { VisualSettings } from "../visualSettings";
 import type { Layer } from "../Layer";
 import type { Palette } from "../palette";
 
@@ -26,6 +27,7 @@ export class ComponentsLayer implements Layer {
   constructor(
     private readonly palette: Palette,
     private readonly state: GameState,
+    private readonly visuals?: VisualSettings,
   ) {}
 
   draw({ ctx, stats }: Parameters<Layer["draw"]>[0]): void {
@@ -130,7 +132,7 @@ export class ComponentsLayer implements Layer {
     ctx.beginPath();
     ctx.arc(0, 0, target.radius * targetCoreFraction, 0, Math.PI * 2);
     ctx.fill();
-    drawTargetShape(ctx, target.requires, target.radius * targetCoreFraction, this.palette);
+    drawTargetShape(ctx, target.requires, target.radius * targetCoreFraction, this.palette, this.visuals?.colorblindAid);
     if (target.chargeSec > 0 && !target.active) this.drawChargeArc(ctx, target, chargeArcOffsetPx);
     ctx.fillStyle = this.palette.mist;
     ctx.fillText(target.id, target.radius + labelOffsetPx, -target.radius);

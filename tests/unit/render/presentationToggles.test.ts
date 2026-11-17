@@ -36,6 +36,7 @@ function visuals(overrides: Partial<VisualSettings> = {}): VisualSettings {
     reducedMotion: true,
     glowEnabled: true,
     particlesEnabled: true,
+    colorblindAid: true,
     ...overrides,
   };
 }

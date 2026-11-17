@@ -47,7 +47,7 @@ export function createVisualRuntime(
   const renderer = new SceneRenderer(view, [
     new BackgroundLayer(palette),
     new EnvironmentLayer(palette, visuals),
-    new ComponentsLayer(palette, state),
+    new ComponentsLayer(palette, state, visuals),
     new BeamLayer(palette, state, visuals),
     new ParticleLayer(pool, sprites, visuals),
     new DarknessLayer(palette, state, sprites),
@@ -60,12 +60,14 @@ export function createVisualRuntime(
     setSettings(next) {
       if (
         visuals.quality === next.quality && visuals.reducedMotion === next.reducedMotion &&
-        visuals.glowEnabled === next.glowEnabled && visuals.particlesEnabled === next.particlesEnabled
+        visuals.glowEnabled === next.glowEnabled && visuals.particlesEnabled === next.particlesEnabled &&
+        visuals.colorblindAid === next.colorblindAid
       ) return;
       visuals.quality = next.quality;
       visuals.reducedMotion = next.reducedMotion;
       visuals.glowEnabled = next.glowEnabled;
       visuals.particlesEnabled = next.particlesEnabled;
+      visuals.colorblindAid = next.colorblindAid;
       emitterSettings.quality = next.quality;
       emitterSettings.reducedMotion = next.reducedMotion;
       pool.setQuality(next.quality);
