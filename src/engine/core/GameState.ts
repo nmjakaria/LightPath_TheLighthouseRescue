@@ -11,8 +11,11 @@ import { getHint, hintGeometryFrom, type HintDisplay } from "@/game/hints";
 import { buildOpticsScene } from "@/game/opticsScene";
 import { eventActivatesSwitch, eventChargesTarget, nextCharge } from "@/game/targets";
 import { solveOptics } from "@/engine/optics/tracer";
+import { emptyResult } from "./emptyResult";
 import { GameInteraction } from "./GameInteraction";
 import { buildHudSnapshot, isPlayCommand, type HudSnapshot } from "./hud";
+import { buildInspectorSnapshot } from "./inspector";
+import { PresentationController } from "./PresentationController";
 import type { InputCommand, InteractionFeedback } from "@/types/input";
 import type {
   GateRuntime,
@@ -27,13 +30,6 @@ import type { OpticsResult } from "@/types/optics";
 import type { Vec2 } from "@/types/vec2";
 
 export type { HudSnapshot };
-function emptyResult(): OpticsResult {
-  return {
-    segments: [],
-    events: [],
-    stats: { segmentCount: 0, maxBounce: 0, terminated: {}, solveMs: 0 },
-  };
-}
 
 export class GameState {
   readonly sources: SourceRuntime[];
@@ -43,6 +39,7 @@ export class GameState {
   readonly gates: GateRuntime[];
   readonly targets: TargetRuntime[];
   readonly interaction: GameInteraction;
+  readonly presentation = new PresentationController();
   elapsedSec = 0;
   status: "playing" | "complete" = "playing";
   dirty = true;
@@ -119,6 +116,7 @@ export class GameState {
       progressAtSec: this.lastProgressAtSec,
       progressLit: this.lastProgressLit,
       prismHit: this.result.events.some((event) => event.type === "prism"),
+      inspector: buildInspectorSnapshot(this.result, this.selectedId, this.presentation.state),
     });
   }
 
@@ -136,6 +134,7 @@ export class GameState {
       this.paused = !this.paused;
       return;
     }
+    if (this.presentation.apply(command)) return;
     if (this.paused || this.status === "complete") return;
     if (command.type === "reset") return this.reset();
     if (command.type === "hint") return this.useHint();

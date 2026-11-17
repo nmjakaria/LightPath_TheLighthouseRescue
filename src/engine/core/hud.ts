@@ -7,6 +7,7 @@ import type { CompletionSummary } from "@/game/completion";
 import type { HintDisplay } from "@/game/hints";
 import { gateBlocks } from "@/game/gates";
 import type { InputCommand, InteractionFeedback } from "@/types/input";
+import type { InspectorSnapshot } from "@/types/inspector";
 import type { GateRuntime, LevelConfig, LevelTutorial, SwitchRuntime, TargetRuntime } from "@/types/level";
 
 export interface HudSnapshot {
@@ -31,6 +32,7 @@ export interface HudSnapshot {
   needHint: boolean;
   celebrationReady: boolean;
   completion: CompletionSummary | null;
+  inspector: InspectorSnapshot;
 }
 
 export interface HudContext {
@@ -55,6 +57,7 @@ export interface HudContext {
   progressAtSec: number;
   progressLit: number;
   prismHit: boolean;
+  inspector: InspectorSnapshot;
 }
 
 function activeTutorials(context: HudContext): readonly LevelTutorial[] {
@@ -100,10 +103,22 @@ export function buildHudSnapshot(context: HudContext): HudSnapshot {
     needHint: needsHint(context, litTargets),
     celebrationReady: context.celebrationReady,
     completion: context.completion,
+    inspector: context.inspector,
   };
 }
 
 /** Only hover is accepted after completion; pause and hint are engine commands, not logic input. */
 export function isPlayCommand(command: InputCommand): boolean {
-  return command.type !== "hover" && command.type !== "pause" && command.type !== "pauseToggle";
+  switch (command.type) {
+    case "hover":
+    case "pause":
+    case "pauseToggle":
+    case "toggleInspector":
+    case "toggleGlow":
+    case "toggleParticles":
+    case "toggleNormals":
+      return false;
+    default:
+      return true;
+  }
 }

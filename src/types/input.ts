@@ -17,4 +17,8 @@ export type InputCommand =
   | { type: "reset" }
   | { type: "hint" }
   | { type: "pause"; paused: boolean }
-  | { type: "pauseToggle" };
+  | { type: "pauseToggle" }
+  | { type: "toggleInspector" }
+  | { type: "toggleGlow" }
+  | { type: "toggleParticles" }
+  | { type: "toggleNormals" };

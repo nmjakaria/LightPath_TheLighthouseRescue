@@ -16,7 +16,9 @@ import { validateLevel } from "@/game/levelValidator";
 import type { LevelConfig } from "@/types/level";
 import { CompletionDialog } from "./CompletionDialog";
 import { GameHud } from "./GameHud";
+import { InspectorPanel, recordFrame } from "./InspectorPanel";
 import { LevelError } from "./LevelError";
+import { PresentationControls } from "./PresentationControls";
 import { PauseMenu } from "./PauseMenu";
 import { TutorialToasts } from "./TutorialToasts";
 
@@ -59,14 +61,15 @@ function PlayableGame({ level, reducedMotion, rotationStepDeg, qualityPreset, sh
   const runtime = useGameRuntime(level, reducedMotion, rotationStepDeg, qualityPreset, audio);
   const { progress, recordCompletion, recordAttempt, markTutorialSeen } = useProgress();
   const { containerRef, canvasRef, snapshot, dispatch, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats } = runtime;
-  const [fps, setFps] = useState({ value: 0, frameMs: 0 });
+  const [stats, setStats] = useState({ fps: 0, frameMs: 0 });
   const saved = useRef(false);
 
   useEffect(() => {
     if (!showFps) return;
     const timer = setInterval(() => {
-      const stats = getStats();
-      setFps({ value: Math.round(stats.fps), frameMs: Math.round(stats.frameMs * 10) / 10 });
+      const current = getStats();
+      setStats({ fps: Math.round(current.fps), frameMs: Math.round(current.frameMs * 10) / 10 });
+      recordFrame(current.frameMs);
     }, uiConfig.fpsRefreshMs);
     return () => clearInterval(timer);
   }, [showFps, getStats]);
@@ -124,9 +127,15 @@ function PlayableGame({ level, reducedMotion, rotationStepDeg, qualityPreset, sh
         best={progress.levels[level.id]?.best ?? null}
         onReplay={replay}
       />
-      {showFps && (
+      <InspectorPanel inspector={snapshot.inspector} stats={stats} />
+      <PresentationControls
+        inspector={snapshot.inspector}
+        dispatch={dispatch}
+        onPause={() => dispatch({ type: "pauseToggle" })}
+      />
+      {showFps && !snapshot.inspector.inspector && (
         <p className="pointer-events-none absolute right-3 top-3 rounded-button border border-navy-line bg-midnight/80 px-2 py-1 font-mono text-xs text-mist">
-          {fps.value} FPS · {fps.frameMs} ms
+          {stats.fps} FPS · {stats.frameMs} ms
         </p>
       )}
     </div>

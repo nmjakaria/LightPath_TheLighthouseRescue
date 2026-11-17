@@ -24,6 +24,15 @@ describe("InputController", () => {
     expect(commandForKey("F5", false)).toBeNull();
   });
 
+  it("maps the PRD presentation keys and keeps pause on Esc", () => {
+    expect(commandForKey("d", false)).toEqual({ type: "toggleInspector" });
+    expect(commandForKey("G", false)).toEqual({ type: "toggleGlow" });
+    expect(commandForKey("p", false)).toEqual({ type: "toggleParticles" });
+    expect(commandForKey("n", false)).toEqual({ type: "toggleNormals" });
+    expect(commandForKey("Escape", false)).toEqual({ type: "pauseToggle" });
+    expect(commandForKey(" ", false)).toEqual({ type: "pauseToggle" });
+  });
+
   it("queues rapid input without dropping commands", () => {
     const input = new InputController();
     for (let index = 0; index < 100; index += 1) {

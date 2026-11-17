@@ -12,6 +12,7 @@ import {
   type PointerEvent,
   type RefObject,
 } from "react";
+import { inspectorConfig } from "@/config/inspectorConfig";
 import { uiConfig } from "@/config/uiConfig";
 import type { QualityPresetValues } from "@/config/gameConfig";
 import { AudioEvents } from "@/engine/audio/AudioEvents";
@@ -59,7 +60,10 @@ export function useGameRuntime(
   const dragRef = useRef<PendingDrag | null>(null);
   const reducedMotionRef = useRef(reducedMotion);
   const rotationStepRef = useRef(rotationStepDeg);
-  const visualSettingsRef = useRef<VisualSettings>({ quality: qualityPreset, reducedMotion });
+  const visualSettingsRef = useRef<VisualSettings>({
+    quality: qualityPreset, reducedMotion,
+    glowEnabled: inspectorConfig.defaults.glow, particlesEnabled: inspectorConfig.defaults.particles,
+  });
   const audioEventsRef = useRef(new AudioEvents());
   const store = useMemo(() => createStore(new GameState(level).snapshot()), [level]);
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
@@ -108,6 +112,8 @@ export function useGameRuntime(
         sincePublishMs += dt * 1000;
         state.tick(dt);
         audioEventsRef.current.detect(state, audio);
+        visualSettingsRef.current.glowEnabled = state.presentation.state.glow;
+        visualSettingsRef.current.particlesEnabled = state.presentation.state.particles;
         visuals.setSettings(visualSettingsRef.current);
         visuals.update(dt, state);
         if (sincePublishMs >= uiConfig.hudRefreshMs) {
@@ -164,9 +170,7 @@ export function useGameRuntime(
     );
   }, []);
 
-  const dispatch = useCallback((command: InputCommand): void => {
-    inputRef.current?.enqueue(command);
-  }, []);
+  const dispatch = useCallback((command: InputCommand): void => inputRef.current?.enqueue(command), []);
 
   const onPointerDown = useCallback(
     (event: PointerEvent<HTMLCanvasElement>) => {
@@ -237,11 +241,8 @@ export function useGameRuntime(
     return { fps: stats?.fps ?? 0, frameMs: stats?.frameMs ?? 0 };
   }, []);
 
-  return useMemo(
-    () => ({
-      containerRef, canvasRef, snapshot, dispatch, pointerWorld,
-      onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats,
-    }),
-    [snapshot, dispatch, pointerWorld, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats],
-  );
+  return useMemo(() => ({
+    containerRef, canvasRef, snapshot, dispatch, pointerWorld,
+    onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats,
+  }), [snapshot, dispatch, pointerWorld, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, getStats]);
 }

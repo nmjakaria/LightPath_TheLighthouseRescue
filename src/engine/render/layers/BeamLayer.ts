@@ -30,7 +30,10 @@ export class BeamLayer implements Layer {
 
   draw({ ctx, stats }: Parameters<Layer["draw"]>[0]): void {
     const passes = gameConfig.render.beamPasses;
-    const passCount = Math.min(passes.length, Math.max(1, this.visuals?.quality.glowPasses ?? passes.length));
+    const glow = this.visuals?.glowEnabled ?? true;
+    const passCount = glow
+      ? Math.min(passes.length, Math.max(1, this.visuals?.quality.glowPasses ?? passes.length))
+      : 1;
     const reduced = this.visuals?.reducedMotion ?? false;
     const time = stats.elapsedSec;
     ctx.save();
@@ -41,7 +44,7 @@ export class BeamLayer implements Layer {
       if (segment.kind === "prismInterior") this.drawInterior(ctx, segment);
       else this.drawSegment(ctx, segment, passes.slice(-passCount), time, reduced);
     }
-    if (!reduced && passCount > 1) this.drawDashes(ctx, time, passes[passes.length - 1].width);
+    if (glow && !reduced && passCount > 1) this.drawDashes(ctx, time, passes[passes.length - 1].width);
     ctx.restore();
   }
 

@@ -13,6 +13,7 @@ import { BackgroundLayer } from "./layers/BackgroundLayer";
 import { ComponentsLayer } from "./layers/ComponentsLayer";
 import { DarknessLayer } from "./layers/DarknessLayer";
 import { EnvironmentLayer } from "./layers/EnvironmentLayer";
+import { InspectorLayer } from "./layers/InspectorLayer";
 import { ParticleLayer } from "./layers/ParticleLayer";
 import { createGlowSpriteCache } from "./glowSprites";
 import type { Palette } from "./palette";
@@ -48,22 +49,29 @@ export function createVisualRuntime(
     new EnvironmentLayer(palette, visuals),
     new ComponentsLayer(palette, state),
     new BeamLayer(palette, state, visuals),
-    new ParticleLayer(pool, sprites),
+    new ParticleLayer(pool, sprites, visuals),
     new DarknessLayer(palette, state, sprites),
+    new InspectorLayer(palette, state),
   ]);
 
   return {
     renderer,
     visuals,
     setSettings(next) {
-      if (visuals.quality === next.quality && visuals.reducedMotion === next.reducedMotion) return;
+      if (
+        visuals.quality === next.quality && visuals.reducedMotion === next.reducedMotion &&
+        visuals.glowEnabled === next.glowEnabled && visuals.particlesEnabled === next.particlesEnabled
+      ) return;
       visuals.quality = next.quality;
       visuals.reducedMotion = next.reducedMotion;
+      visuals.glowEnabled = next.glowEnabled;
+      visuals.particlesEnabled = next.particlesEnabled;
       emitterSettings.quality = next.quality;
       emitterSettings.reducedMotion = next.reducedMotion;
       pool.setQuality(next.quality);
     },
     update(dt, current) {
+      if (!visuals.particlesEnabled) return;
       emitter.update(dt, current, pool, emitterSettings);
       pool.update(dt, current.elapsedSec, visuals.reducedMotion);
     },

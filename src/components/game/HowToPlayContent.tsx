@@ -19,6 +19,11 @@ const SHORTCUTS = [
   ["Reset the level", "R"],
   ["Hint", "H"],
   ["Pause", "Esc"],
+  ["Optics Inspector", "D"],
+  ["Glow on/off", "G"],
+  ["Particles on/off", "P"],
+  ["Normals only", "N"],
+  ["Unlock all levels", "U"],
 ] as const;
 
 export function HowToPlayContent() {

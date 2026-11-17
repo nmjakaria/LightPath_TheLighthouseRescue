@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 12 — Audio — PARTIAL (2026-11-18). Implementation and full gate pass (286 tests); real-browser gesture unlock, audibility and mute persistence remain unverified. Waiting for "next" before STEP 13.
+STEP 13 — Optics Inspector — PARTIAL (2026-11-18). Implementation and full gate pass (296 tests); real-browser D/G/P/N/U demonstrations and the ≤30 s concept-mapping rehearsal remain unverified. Waiting for "next" before STEP 14.
 
 ## Step log (date · step · status · commit)
 
@@ -20,7 +20,7 @@ STEP 12 — Audio — PARTIAL (2026-11-18). Implementation and full gate pass (2
 | 2026-11-17 | 10 — Game rules, five levels, progression | PARTIAL | 7dec7aa (feature) |
 | 2026-11-17 | 11 — Visual polish | PARTIAL | 8f07acf (feature) |
 | 2026-11-18 | 12 — Audio | PARTIAL | 7db66fe (feature) |
-| — | 13 — Optics Inspector | NOT STARTED | — |
+| 2026-11-18 | 13 — Optics Inspector | PARTIAL | pending |
 | — | 14 — Accessibility, performance, hardening | NOT STARTED | — |
 | — | 15 — Documentation, deployment, demo readiness | NOT STARTED | — |
 
@@ -103,6 +103,13 @@ STEP 12 — Audio — PARTIAL (2026-11-18). Implementation and full gate pass (2
 - All audio tunables (frequencies, durations, throttles, ambience levels, voice cap) live in `src/config/audioConfig.ts`; manager defaults are read from `settingsSchema.DEFAULT_SETTINGS` rather than duplicated numbers.
 - A delegated document-level click listener plays the UI cue, so existing UI primitives needed no audio imports; the same first pointer/key gesture unlocks Web Audio for every screen.
 - Real-browser autoplay unlock, audible cue quality, instant mute while sound is playing and persistence after reload were not verified without browser automation; Node tests cover the graph, gains and transitions only.
+- STEP 13 Inspector data comes from the tracer's `HitEvent` array via a pure bridge; no second reflection formula is implemented for display, so TC-G13 compares the panel with solver output directly.
+- D/G/P/N toggles are engine-owned presentation state so they work while paused and do not restart a level. The renderer receives the same flags through the mutable `VisualSettings` object; G falls back to one core pass and P skips both particle update and draw while keeping the pool allocated.
+- P is mapped to particles per FR-064; pause remains Esc per FR-025 (Space is an added alias). How-to-Play now lists every presentation key.
+- U is handled in the React presentation controls rather than the engine because `demoUnlockAll` is a persisted user setting; the key listener only exists when the demo-unlock feature flag allows it.
+- Inspector values reach the DOM through the existing ≤10 Hz HUD snapshot. The frame-time graph uses a tiny external store fed by the same poll, so React never re-renders per animation frame.
+- All overlay sizes, defaults, graph bounds and precision live in `src/config/inspectorConfig.ts`; overlay colours come from the renderer palette tokens, with no new hardcoded hex values.
+- Real-browser toggling, selected-hit readability, frame-graph appearance and the ≤30 s demonstrations of PRD §12.10 were not performed; unit tests cover the data bridge, key mapping, canvas draw calls and renderer toggles only.
 
 ## PRD deviations (with justification)
 
@@ -195,6 +202,14 @@ STEP 12 — Audio — PARTIAL (2026-11-18). Implementation and full gate pass (2
 - 2026-11-18, 500 four-mirror solves in the passing gate run (no coverage instrumentation): average 0.1046 ms, p95 0.1706 ms, max 4.7163 ms.
 - No browser audio, FPS, frame-time or bundle-size figures were measured in this step; no browser automation was available.
 
+## Step 13 measurements
+
+- 2026-11-18, Node v22.22.3 / npm 11.15.0: full gate passes sequentially — lint ✔ (0 warnings), typecheck ✔, 296 tests in 52 files ✔ (10 new), `next build` ✔ (7 static routes plus `/play/[levelId]` partial prerender).
+- 2026-11-18, new tests: Inspector data bridge 4 (TC-G13 vectors/dot/angles, formatting, hit selection, live toggles), input mapping 1, InspectorLayer canvas stub 3, renderer G/P toggles 2.
+- 2026-11-18: largest new source file is `InspectorLayer.ts` at 164 lines, then `InspectorPanel.tsx` 78 and `PresentationControls.tsx` 60; `GameState.ts` 249 and `useGameRuntime.ts` 248 remain within the 250-line budget, and all React components remain under 120 lines.
+- 2026-11-18, 500 four-mirror solves in the passing gate run (no coverage instrumentation): average 0.0984 ms, p95 0.1436 ms, max 4.6914 ms.
+- No browser D/G/P/N/U interaction, frame-graph, concept-demo timing, FPS, frame-time or bundle-size figures were measured in this step; no browser automation was available.
+
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
 | ID | Status | ID | Status |
@@ -226,3 +241,4 @@ FR-062 / FR-063: quality and reduced-motion now apply live in Step 11 through a 
 TC-F03 / AC-06: 20 reflection pairs pass the independent 2θ−φ oracle in Step 7; the 4-bounce chain coordinates assertion is a test-scene check, not a Level 2 reference (levels arrive in STEP 10).
 AC-14: TC-X01–X08 now all pass (X05/X06 were added in Step 9). AC-22 still has ≥90% optics coverage after prism/gate additions; scoring and validator statement coverage were measured in STEP 10, with branch coverage still to be raised in STEP 14.
 FR-050 / FR-051: all seven cue families, first-gesture unlock, master/SFX/ambient gains, instant mute, 8-voice cap and per-cue throttling are implemented and unit-tested in STEP 12. Real-browser audibility, autoplay behaviour and saved-setting restoration remain unverified, so the step status is PARTIAL.
+FR-041 / FR-064 / TC-G13 / AC-18: normals, hit numbers, incidence/reflection arcs and the d/n/r panel are implemented from solver events; D/G/P/N/U toggles work live in engine/renderer/React unit tests. Real-browser demonstration and the ≤30 s Concept Mapping Table rehearsal are not verified, so STEP 13 is PARTIAL.

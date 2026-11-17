@@ -38,9 +38,20 @@ export function commandForKey(key: string, shiftKey: boolean): InputCommand | nu
     case "h":
     case "H":
       return { type: "hint" };
+    case "d":
+    case "D":
+      return { type: "toggleInspector" };
+    case "g":
+    case "G":
+      return { type: "toggleGlow" };
     case "p":
     case "P":
+      return { type: "toggleParticles" };
+    case "n":
+    case "N":
+      return { type: "toggleNormals" };
     case "Escape":
+    case " ":
       return { type: "pauseToggle" };
     default:
       return null;
