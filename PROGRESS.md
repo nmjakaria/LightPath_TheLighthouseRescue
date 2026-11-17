@@ -20,7 +20,7 @@ STEP 13 — Optics Inspector — PARTIAL (2026-11-18). Implementation and full g
 | 2026-11-17 | 10 — Game rules, five levels, progression | PARTIAL | 7dec7aa (feature) |
 | 2026-11-17 | 11 — Visual polish | PARTIAL | 8f07acf (feature) |
 | 2026-11-18 | 12 — Audio | PARTIAL | 7db66fe (feature) |
-| 2026-11-18 | 13 — Optics Inspector | PARTIAL | pending |
+| 2026-11-18 | 13 — Optics Inspector | PARTIAL | 414f72a (feature) |
 | — | 14 — Accessibility, performance, hardening | NOT STARTED | — |
 | — | 15 — Documentation, deployment, demo readiness | NOT STARTED | — |
 
