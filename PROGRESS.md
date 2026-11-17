@@ -2,7 +2,7 @@
 
 ## Current step
 
-STEP 6 — Canvas foundation — PARTIAL (2026-11-17). Implementation + full gate passed; browser-only FPS and listener checks remain unverified. Waiting for "next" before STEP 7.
+STEP 7 — Optics core — PASS (2026-11-17). Full gate and all step-specific optics checks passed. Waiting for "next" before STEP 8.
 
 ## Step log (date · step · status · commit)
 
@@ -14,6 +14,7 @@ STEP 6 — Canvas foundation — PARTIAL (2026-11-17). Implementation + full gat
 | 2026-11-17 | 4 — UI primitives | PASS | e7c5154 (feature) |
 | 2026-11-17 | 5 — Screens and navigation | PARTIAL | 3e41f30 (feature) |
 | 2026-11-17 | 6 — Canvas foundation | PARTIAL | 1ce8167 (feature) |
+| 2026-11-17 | 7 — Optics core | PASS | 8811c38 (feature) |
 | — | 7 — Optics core | NOT STARTED | — |
 | — | 8 — Level 1 playable | NOT STARTED | — |
 | — | 9 — Remaining mechanics | NOT STARTED | — |
@@ -55,6 +56,12 @@ STEP 6 — Canvas foundation — PARTIAL (2026-11-17). Implementation + full gat
 - `GameLoop` seeds its smoothed frame time from the first real interval; without that fix the first FPS reading was inflated by the smoothing factor. `dt` is clamped to `DT_CLAMP` and suspended frames reset `lastTime` so a tab return never spikes.
 - The dev FPS overlay uses `effective.showFps` or the `NEXT_PUBLIC_FPS_OVERLAY` flag; the sample interval lives in `uiConfig.fpsRefreshMs`, and DPR cap, FPS smoothing, star count and hit radius live in `gameConfig.render`.
 - The play route serves SSR markup with the "Lighting the lamp…" gate; `GameCanvas` mounts only after `useClientReady`, so no canvas element appears in the initial HTML. Real-browser idle FPS, visual resize behaviour and actual DOM-listener teardown were not measured (no browser automation available); frame-request teardown is covered by a 20-cycle unit test.
+- Step 7 keeps prism splitting for STEP 9 as the AGENTS step plan requires. `getPrismVertices` exists as a pure transform helper and `HitType` includes `"prism"`, but no prism geometry is added to `OpticsScene` yet.
+- `src/types/optics.ts` holds the PRD §19 solver shapes; `OpticsScene` is the minimal geometry slice so optics never imports a level module. A gate is active while `openFraction < gameConfig.optics.gateOpenFraction` (0.5).
+- Repeat-state keys, lamp housing radius and the gate threshold are build-time tunables in `gameConfig.optics`, keeping the solver free of magic numbers.
+- Primitive building and nearest-hit tie priority live in `src/engine/optics/primitives.ts`; `tracer.ts` stayed under the 250-line file budget after extraction.
+- `solveOptics` takes an injectable clock so tests can measure or freeze `stats.solveMs`; production uses `performance.now()`. Arrays are allocated once at `MAX_SEGMENTS` capacity and trimmed at the end, avoiding repeated growth during a solve.
+- A non-finite mirror is skipped (with a dev-only warning) rather than aborting the whole solve; a non-finite source is skipped and counted under `terminated.invalid`.
 
 ## PRD deviations (with justification)
 
@@ -97,6 +104,14 @@ STEP 6 — Canvas foundation — PARTIAL (2026-11-17). Implementation + full gat
 - 2026-11-17: largest Step 6 source file is `PlaceholderSceneLayer.ts` at 160 lines (budget 250); largest React component is `GameCanvas.tsx` at 48 lines (budget 120).
 - 2026-11-17, user-owned dev server on `http://localhost:3000/play/level-01`: HTTP 200 with the SSR gate placeholder present. No FPS, frame-time or bundle-size figures measured.
 
+## Step 7 measurements
+
+- 2026-11-17, Node v22.22.3: full gate passes sequentially — lint ✔, typecheck ✔, 169 tests in 25 files ✔ (34 new), `next build` ✔ (7 static routes plus `/play/[levelId]` partial prerender).
+- 2026-11-17, `npm run test:coverage`: `src/engine/optics` = 95.56% statements / 92.92% branches / 100% functions / 95.56% lines; 90% per-glob threshold now enforced in `vitest.config.ts`.
+- 2026-11-17, 500 four-mirror solves (node environment, no coverage instrumentation): average 0.0799 ms, p95 0.1242 ms, max 1.5372 ms; the assertion requires average < 2 ms.
+- 2026-11-17: largest optics source file is `tracer.ts` at 181 lines (budget 250); `primitives.ts` 124, `transform.ts` 69, `intersect.ts` 68, `reflect.ts` 23.
+- TC-F03 covered with 20 (φ, θ) pairs; TC-G01–G04, TC-E01–E03, TC-E05, TC-X01–X04, TC-X07 and TC-X08 all have dedicated unit tests. No browser measurement in this step.
+
 ## Acceptance checklist (AC-01 … AC-28: ☐ / ✔ verified / ✘ not verified)
 
 | ID | Status | ID | Status |
@@ -125,3 +140,5 @@ AC-02: Step 5 adds all menu routes, Back buttons, schema-driven settings, lock-t
 FR-001–010: implemented across Step 5 screens and gating; real-browser acceptance is still pending, so the step status is PARTIAL rather than PASS.
 FR-061 / TC-G12: responsive 16:9 view transform, DPR cap and pointer inversion implemented and unit-tested in Step 6; zoom/letterbox rendering and idle 60 FPS still need a real browser.
 FR-062 / FR-063: quality and reduced-motion values are threaded into the canvas hook, but live switching and visible motion reduction are Steps 11–12 work; the STEP 6 preview only pauses its pulse clock when reduced motion is active.
+TC-F03 / AC-06: 20 reflection pairs pass the independent 2θ−φ oracle in Step 7; the 4-bounce chain coordinates assertion is a test-scene check, not a Level 2 reference (levels arrive in STEP 10).
+AC-14: TC-X01–X04, X07, X08 pass in Step 7; X05/X06 (prism branching and gate flicker) are STEP 9 work. AC-22 now has 90% optics coverage in addition to the math threshold; scoring and validator coverage come later.
