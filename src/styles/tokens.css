@@ -1,0 +1,37 @@
+/* Design tokens from PRD §14.1. This file is the single source of truth for palette, type and shape. */
+
+:root {
+  /* Palette */
+  --abyss: #040813;
+  --midnight: #0a1530;
+  --deep-navy: #11224a;
+  --navy-line: #26417a;
+  --cyan-beam: #22d3ee;
+  --ocean-teal: #14b8a6;
+  --beam-core: #e6fbff;
+  --soft-white: #f1f7ff;
+  --mist: #9fb3d1;
+  --light-red: #ff4d6d;
+  --light-green: #4dff9f;
+  --light-blue: #4d9bff;
+  --star-gold: #ffd166;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+
+  /* Font families supplied by next/font on the root element. */
+  --heading-font: var(--font-space-grotesk, system-ui);
+  --body-font: var(--font-inter, system-ui);
+  --code-font: var(--font-jetbrains-mono, ui-monospace, monospace);
+
+  /* 8 px spacing scale, 12 px cards, 8 px buttons (PRD §14.1). */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  --card-radius: 12px;
+  --button-radius: 8px;
+  --panel-opacity: 0.8;
+}

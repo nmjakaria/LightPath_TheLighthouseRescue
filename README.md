@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LightPath — The Lighthouse Rescue
 
-## Getting Started
+A 2D optical puzzle game built for a Computer Graphics course. Next.js App Router + React +
+strict TypeScript for the shell, native HTML5 Canvas 2D for the game, and a pure TypeScript
+optics core. The single source of truth for requirements is `docs/LightPath_PRD.md`.
 
-First, run the development server:
+## Setup
+
+Requires Node.js 20.9+ (Node 22 recommended) and npm.
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>. The current screen is the Step 1 scaffold placeholder.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | Purpose |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript (no emit) |
+| `npm run test` | Vitest unit tests |
+| `npm run test:coverage` | Vitest with V8 coverage |
+| `npm run format` / `npm run format:check` | Prettier |
 
-## Learn More
+The same four gate commands (lint, typecheck, test, build) run in `.github/workflows/ci.yml`.
 
-To learn more about Next.js, take a look at the following resources:
+## Layout and conventions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `src/app` — routes; `src/components/ui` — reusable primitives; `src/components/game` — HUD/canvas.
+- `src/engine/core` — loop, state, input, view; `src/engine/optics` — pure light mathematics.
+- `src/engine/render`, `src/engine/particles`, `src/engine/audio` — presentation only.
+- `src/game` — rules; `src/levels` — data only; `src/lib/math` — vectors, matrices, constants.
+- `src/config`, `src/lib/store`, `src/stores`, `src/hooks` — settings and persistence (from Step 3).
+- `src/styles/tokens.css` — design tokens from PRD §14.1, mapped into Tailwind in `src/app/globals.css`.
+- World space is 1280 × 720 wu, x right / y down; angles are degrees in data, radians internally.
+- `src/lib/math` and `src/engine/optics` never import React, the DOM, the renderer or app code.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Build progress and decisions are recorded in `PROGRESS.md`.
