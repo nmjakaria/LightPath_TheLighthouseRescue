@@ -49,6 +49,10 @@ export interface GameConfig {
     prismTransmittance: number;
     prismSpreadDeg: number;
     mixedThreshold: number;
+    repeatPositionGrid: number;
+    repeatAngleGridDeg: number;
+    lampHousingRadius: number;
+    gateOpenFraction: number;
   };
   interaction: {
     rotationStepDeg: number;
@@ -92,6 +96,10 @@ export const gameConfig: GameConfig = {
     prismTransmittance: PRISM_TRANSMITTANCE,
     prismSpreadDeg: 12,
     mixedThreshold: MIXED_THRESHOLD,
+    repeatPositionGrid: 0.5,
+    repeatAngleGridDeg: 0.5,
+    lampHousingRadius: 18,
+    gateOpenFraction: 0.5,
   },
   interaction: {
     rotationStepDeg: ROTATION_STEP,
