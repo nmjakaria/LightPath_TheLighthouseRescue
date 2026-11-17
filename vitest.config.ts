@@ -15,6 +15,14 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html"],
       include: ["src/lib/**/*.ts", "src/engine/optics/**/*.ts", "src/game/**/*.ts"],
+      thresholds: {
+        "src/lib/math/**/*.ts": {
+          lines: 90,
+          statements: 90,
+          branches: 90,
+          functions: 90,
+        },
+      },
     },
   },
 });
